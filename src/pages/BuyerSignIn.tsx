@@ -22,9 +22,12 @@ const BuyerSignIn = () => {
   // Redirect if already authenticated
   useEffect(() => {
     if (!authLoading && user && profile) {
+      console.log('User profile:', profile);
       if (profile.user_type === 'buyer') {
+        console.log('Redirecting buyer to buyer dashboard');
         navigate('/buyer-dashboard');
-      } else {
+      } else if (profile.user_type === 'seller') {
+        console.log('Redirecting seller to seller dashboard');
         navigate('/seller-dashboard');
       }
     }
@@ -46,8 +49,10 @@ const BuyerSignIn = () => {
           setLoading(false);
           return;
         }
+        console.log('Signing up buyer with:', { email, name, userType: 'buyer' });
         result = await signUp(email, password, name, 'buyer');
       } else {
+        console.log('Signing in buyer with:', { email });
         result = await signIn(email, password);
       }
       
@@ -69,7 +74,7 @@ const BuyerSignIn = () => {
             title: "Welcome back!",
             description: "You have been signed in successfully.",
           });
-          navigate('/buyer-dashboard');
+          // The useEffect will handle the redirect based on user_type
         }
       }
     } catch (error) {
