@@ -37,11 +37,16 @@
 
 ## 🧑‍💻 Tech Stack
 
-- **Frontend**: React.js + Tailwind CSS
-- **Backend**: Supabase (Database & Auth)
-- **Storage**: Supabase Storage for STL file uploads
-- **Mapping**: Mapbox API for seller location viewing
-- **Deployment**: Vercel
+This project is built with:
+
+- **Vite** – Fast and optimized frontend build tool
+- **TypeScript** – Strongly typed JavaScript for safer development
+- **React** – Component-based UI library
+- **shadcn/ui** – Beautiful and accessible UI components
+- **Tailwind CSS** – Utility-first CSS framework for rapid UI styling
+- **Supabase** – Backend-as-a-Service (authentication, database, file storage)
+- **Mapbox API** – For displaying seller locations on an interactive map
+- **Vercel** – Deployment platform for frontend applications
 
 ---
 
