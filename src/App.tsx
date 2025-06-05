@@ -14,6 +14,7 @@ import SellerProfile from "./pages/SellerProfile";
 import UploadFile from "./pages/UploadFile";
 import PrinterMap from "./pages/PrinterMap";
 import Messages from "./pages/Messages";
+import SellerMessages from "./pages/SellerMessages";
 import Marketplace from "./pages/Marketplace";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
           <Route path="/upload-file" element={<UploadFile />} />
           <Route path="/printer-map" element={<PrinterMap />} />
           <Route path="/messages" element={<Messages />} />
+          <Route path="/seller-messages" element={<SellerMessages />} />
           <Route path="/marketplace" element={<Marketplace />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
