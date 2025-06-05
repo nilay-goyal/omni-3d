@@ -45,30 +45,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Fetch user profile using raw SQL to avoid type issues
+          // Fetch user profile with a simple query
           setTimeout(async () => {
             try {
-              const { data: profileData, error } = await supabase
-                .rpc('get_user_profile', { user_id: session.user.id });
+              // Use a simple query that should work regardless of type definitions
+              const response = await supabase
+                .from('profiles')
+                .select('id, user_type, full_name, email')
+                .eq('id', session.user.id)
+                .maybeSingle();
               
-              if (error) {
-                console.error('Error fetching profile:', error);
-                // Fallback: try direct query
-                const { data: fallbackData, error: fallbackError } = await supabase
-                  .from('profiles' as any)
-                  .select('*')
-                  .eq('id', session.user.id)
-                  .single();
-                
-                if (fallbackError) {
-                  console.error('Fallback profile fetch error:', fallbackError);
-                } else {
-                  console.log('Profile loaded via fallback:', fallbackData);
-                  setProfile(fallbackData as Profile);
-                }
+              if (response.error) {
+                console.error('Error fetching profile:', response.error);
+              } else if (response.data) {
+                console.log('Profile loaded:', response.data);
+                setProfile(response.data as Profile);
               } else {
-                console.log('Profile loaded:', profileData);
-                setProfile(profileData as Profile);
+                console.log('No profile found for user');
               }
             } catch (err) {
               console.error('Profile fetch error:', err);
