@@ -1,73 +1,55 @@
-# Welcome to your Lovable project
+![Omni 3D](thumbnail.png)
 
-## Project info
+<div align='center'>
 
-**URL**: https://lovable.dev/projects/2ea86d19-78d0-47ee-8dad-ad8067d0ca30
+[![Version](https://img.shields.io/github/v/release/yourusername/omni-3d?color=%23FDD835&label=version&style=for-the-badge)](https://github.com/yourusername/omni-3d/releases)
+[![License](https://img.shields.io/github/license/yourusername/omni-3d?style=for-the-badge)](https://github.com/yourusername/omni-3d/blob/main/LICENSE)
 
-## How can I edit this code?
+</div>
 
-There are several ways of editing your application.
+---
 
-**Use Lovable**
+## 🔗 Quick Links
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/2ea86d19-78d0-47ee-8dad-ad8067d0ca30) and start prompting.
+<div align='center'>
 
-Changes made via Lovable will be committed automatically to this repo.
+[![Homepage](https://img.shields.io/badge/HOMEPAGE-gray?style=for-the-badge)](https://omni-3d.ca)
+[![Documentation](https://img.shields.io/badge/DOCUMENTATION-blue?style=for-the-badge)](https://omni-3d.ca/docs)
+[![Case Study](https://img.shields.io/badge/CASE_STUDY-green?style=for-the-badge)](https://omni-3d.ca/case-study)
 
-**Use your preferred IDE**
+</div>
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+---
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## 🛠️ Project Overview
 
-Follow these steps:
+**Omni 3D** is a two-sided marketplace platform that connects individuals in need of 3D printing with local 3D printer owners. Inspired by the simplicity of Facebook Marketplace, Omni 3D delivers a focused, streamlined experience for both buyers and sellers in the 3D printing space.
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### 🎯 Key Features
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+- **User Roles**: Separate dashboards for buyers and sellers
+- **STL File Upload**: Buyers can upload `.STL` files to request prints
+- **Seller Discovery**: Buyers can view sellers nearby on a map
+- **Messaging System**: Buyers and sellers can communicate through in-app messaging
+- **Responsive Design**: Seamless UI for both desktop and mobile users
 
-# Step 3: Install the necessary dependencies.
-npm i
+---
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+## 🧑‍💻 Tech Stack
 
-**Edit a file directly in GitHub**
+- **Frontend**: React.js + Tailwind CSS
+- **Backend**: Supabase (Database & Auth)
+- **Storage**: Supabase Storage for STL file uploads
+- **Mapping**: Mapbox API for seller location viewing
+- **Deployment**: Vercel
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+---
 
-**Use GitHub Codespaces**
+## 🚀 Getting Started
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+To run the project locally:
 
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/2ea86d19-78d0-47ee-8dad-ad8067d0ca30) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+1. **Clone the repo**:
+   ```bash
+   git clone https://github.com/yourusername/omni-3d.git
+   cd omni-3d
