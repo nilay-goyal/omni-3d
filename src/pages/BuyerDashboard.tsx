@@ -1,32 +1,54 @@
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Upload, Map, MessageCircle, LogOut, Printer } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 const BuyerDashboard = () => {
-  const [userName, setUserName] = useState("");
   const navigate = useNavigate();
+  const { user, profile, loading, signOut } = useAuth();
 
   useEffect(() => {
-    const storedName = localStorage.getItem('userName');
-    const userType = localStorage.getItem('userType');
-    
-    if (!storedName || userType !== 'buyer') {
-      navigate('/buyer-signin');
-      return;
+    if (!loading) {
+      if (!user) {
+        console.log('No user found, redirecting to buyer signin');
+        navigate('/buyer-signin');
+        return;
+      }
+      
+      if (profile && profile.user_type !== 'buyer') {
+        console.log('User is not a buyer, redirecting to seller dashboard');
+        navigate('/seller-dashboard');
+        return;
+      }
     }
-    
-    setUserName(storedName);
-  }, [navigate]);
+  }, [user, profile, loading, navigate]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('userType');
-    localStorage.removeItem('userName');
-    localStorage.removeItem('userEmail');
-    navigate('/');
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      navigate('/');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user || !profile) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -39,8 +61,8 @@ const BuyerDashboard = () => {
               <h1 className="text-xl font-bold text-gray-900">Omni3D</h1>
             </Link>
             <div className="flex items-center space-x-2 sm:space-x-4">
-              <span className="text-gray-700 text-sm sm:text-base hidden sm:inline">Welcome, {userName}</span>
-              <span className="text-gray-700 text-sm sm:hidden">Hi, {userName.split(' ')[0]}</span>
+              <span className="text-gray-700 text-sm sm:text-base hidden sm:inline">Welcome, {profile.full_name}</span>
+              <span className="text-gray-700 text-sm sm:hidden">Hi, {profile.full_name.split(' ')[0]}</span>
               <Button variant="ghost" onClick={handleLogout} size="sm">
                 <LogOut className="h-4 w-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">Logout</span>
