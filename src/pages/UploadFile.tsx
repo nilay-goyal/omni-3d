@@ -6,6 +6,7 @@ import { Upload, File, Check, X, Loader2, ArrowLeft } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface UploadedFile {
   id: string;
@@ -19,29 +20,39 @@ const UploadFile = () => {
   const [dragActive, setDragActive] = useState(false);
   const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
-  const [userName, setUserName] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, profile, loading } = useAuth();
 
   useEffect(() => {
-    const storedName = localStorage.getItem('userName');
-    const userType = localStorage.getItem('userType');
-    
-    if (!storedName || userType !== 'buyer') {
-      navigate('/buyer-signin');
-      return;
-    }
-    
-    setUserName(storedName);
-    loadUploadedFiles(storedName);
-  }, [navigate]);
+    if (!loading) {
+      if (!user) {
+        console.log('No user found, redirecting to buyer signin');
+        navigate('/buyer-signin');
+        return;
+      }
+      
+      if (profile && profile.user_type !== 'buyer') {
+        console.log('User is not a buyer, redirecting to seller dashboard');
+        navigate('/seller-dashboard');
+        return;
+      }
 
-  const loadUploadedFiles = async (userName: string) => {
+      // Load uploaded files when user is authenticated
+      if (user && profile) {
+        loadUploadedFiles();
+      }
+    }
+  }, [user, profile, loading, navigate]);
+
+  const loadUploadedFiles = async () => {
+    if (!user) return;
+    
     try {
       const { data, error } = await supabase
         .from('uploaded_files')
         .select('*')
-        .eq('user_name', userName)
+        .eq('user_name', profile?.full_name || user.email)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -98,10 +109,13 @@ const UploadFile = () => {
   };
 
   const uploadFile = async (file: File) => {
+    if (!user || !profile) return;
+    
     const fileId = crypto.randomUUID();
     setUploadingFiles(prev => new Set(prev).add(fileId));
 
     try {
+      const userName = profile.full_name || user.email;
       const filePath = `${userName}/${Date.now()}-${file.name}`;
       
       // Upload to Supabase storage
@@ -130,7 +144,7 @@ const UploadFile = () => {
       });
 
       // Reload files list
-      await loadUploadedFiles(userName);
+      await loadUploadedFiles();
 
     } catch (error) {
       console.error('Upload error:', error);
@@ -166,6 +180,21 @@ const UploadFile = () => {
     });
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user || !profile) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navigation */}
@@ -177,7 +206,7 @@ const UploadFile = () => {
               Back to Dashboard
             </Link>
             <div className="flex items-center">
-              <span className="text-gray-700">Welcome, {userName}</span>
+              <span className="text-gray-700">Welcome, {profile.full_name}</span>
             </div>
           </div>
         </div>
