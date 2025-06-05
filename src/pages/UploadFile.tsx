@@ -38,6 +38,12 @@ const UploadFile = () => {
 
   const loadUploadedFiles = async (userName: string) => {
     try {
+      // Set the user context for RLS
+      await supabase.rpc('set_config', {
+        setting_name: 'app.current_user',
+        setting_value: userName
+      });
+
       const { data, error } = await supabase
         .from('uploaded_files')
         .select('*')
@@ -102,6 +108,12 @@ const UploadFile = () => {
     setUploadingFiles(prev => new Set(prev).add(fileId));
 
     try {
+      // Set the user context for RLS before any database operations
+      await supabase.rpc('set_config', {
+        setting_name: 'app.current_user',
+        setting_value: userName
+      });
+
       const filePath = `${userName}/${Date.now()}-${file.name}`;
       
       // Upload to Supabase storage

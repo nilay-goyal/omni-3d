@@ -11,6 +11,7 @@ import SellerSignIn from "./pages/SellerSignIn";
 import BuyerDashboard from "./pages/BuyerDashboard";
 import SellerDashboard from "./pages/SellerDashboard";
 import UploadFile from "./pages/UploadFile";
+import PrinterMap from "./pages/PrinterMap";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,7 @@ const App = () => (
           <Route path="/buyer-dashboard" element={<BuyerDashboard />} />
           <Route path="/seller-dashboard" element={<SellerDashboard />} />
           <Route path="/upload-file" element={<UploadFile />} />
+          <Route path="/printer-map" element={<PrinterMap />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
