@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Printer, Users, MapPin, MessageCircle } from "lucide-react";
+import { Printer, Users, MapPin, MessageCircle, ShoppingBag } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const Index = () => {
@@ -11,13 +11,19 @@ const Index = () => {
       <nav className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
+            <Link to="/" className="flex items-center">
               <Printer className="h-8 w-8 text-blue-600 mr-2" />
               <h1 className="text-xl font-bold text-gray-900">Omni3D</h1>
-            </div>
+            </Link>
             <div className="flex space-x-4">
               <Link to="/buyer-signin">
                 <Button variant="outline">Find a Printer</Button>
+              </Link>
+              <Link to="/marketplace">
+                <Button variant="outline">
+                  <ShoppingBag className="h-4 w-4 mr-2" />
+                  Marketplace
+                </Button>
               </Link>
               <Link to="/seller-signin">
                 <Button>Offer Services</Button>
@@ -42,6 +48,12 @@ const Index = () => {
             <Link to="/buyer-signin">
               <Button size="lg" className="px-8 py-3">
                 Find a Printer
+              </Button>
+            </Link>
+            <Link to="/marketplace">
+              <Button size="lg" variant="outline" className="px-8 py-3">
+                <ShoppingBag className="h-4 w-4 mr-2" />
+                Browse Marketplace
               </Button>
             </Link>
             <Link to="/seller-signin">

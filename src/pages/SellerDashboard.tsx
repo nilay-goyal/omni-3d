@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Printer, Settings, MessageCircle, LogOut, User } from "lucide-react";
+import { Printer, Settings, MessageCircle, LogOut, User, Package, Plus } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
 const SellerDashboard = () => {
@@ -25,6 +25,7 @@ const SellerDashboard = () => {
     localStorage.removeItem('userType');
     localStorage.removeItem('userName');
     localStorage.removeItem('userEmail');
+    localStorage.removeItem('sellerProfile');
     navigate('/');
   };
 
@@ -34,10 +35,10 @@ const SellerDashboard = () => {
       <nav className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
+            <Link to="/" className="flex items-center">
               <Printer className="h-8 w-8 text-green-600 mr-2" />
               <h1 className="text-xl font-bold text-gray-900">Omni3D</h1>
-            </div>
+            </Link>
             <div className="flex items-center space-x-4">
               <span className="text-gray-700">Welcome, {userName}</span>
               <Button variant="ghost" onClick={handleLogout}>
@@ -110,6 +111,57 @@ const SellerDashboard = () => {
               </Link>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Your Listings Section */}
+        <div className="mt-12">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">Your Listings</h2>
+            <Button className="bg-blue-600 hover:bg-blue-700">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Listing
+            </Button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Placeholder listings */}
+            {[1, 2, 3].map((item) => (
+              <Card key={item} className="bg-gray-800 text-white border-gray-700">
+                <CardContent className="p-6">
+                  <div className="aspect-square bg-gray-700 rounded-lg mb-4 flex items-center justify-center">
+                    <Package className="h-12 w-12 text-gray-500" />
+                  </div>
+                  <h3 className="font-bold text-lg mb-2 text-gray-400">Parent group's Listing's name - deleted</h3>
+                  <div className="space-y-2 text-sm text-gray-500">
+                    <div className="flex items-center">
+                      <Printer className="h-4 w-4 mr-2" />
+                      Parent group's Listing's seller's printer_type
+                    </div>
+                    <div className="flex items-center">
+                      <Settings className="h-4 w-4 mr-2" />
+                      Parent group's Listing's material
+                    </div>
+                    <div className="flex items-center">
+                      <span className="w-4 h-4 rounded-full bg-gray-600 mr-2"></span>
+                      Parent group's Listing's color
+                    </div>
+                    <div className="flex items-center">
+                      <span className="text-lg mr-2">$</span>
+                      Parent group's Listing's price
+                    </div>
+                  </div>
+                  <div className="flex space-x-2 mt-4">
+                    <Button variant="secondary" size="sm" className="flex-1">
+                      Edit
+                    </Button>
+                    <Button variant="destructive" size="sm" className="flex-1">
+                      Delete
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
 
         {/* Getting Started */}
