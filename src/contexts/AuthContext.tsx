@@ -45,11 +45,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Fetch user profile with a simple query
+          // Fetch user profile using type assertion to work around type issues
           setTimeout(async () => {
             try {
-              // Use a simple query that should work regardless of type definitions
-              const response = await supabase
+              // Use type assertion to bypass TypeScript errors until types are updated
+              const response = await (supabase as any)
                 .from('profiles')
                 .select('id, user_type, full_name, email')
                 .eq('id', session.user.id)
@@ -59,7 +59,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 console.error('Error fetching profile:', response.error);
               } else if (response.data) {
                 console.log('Profile loaded:', response.data);
-                setProfile(response.data as Profile);
+                setProfile(response.data);
               } else {
                 console.log('No profile found for user');
               }
