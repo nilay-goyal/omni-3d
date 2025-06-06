@@ -1,4 +1,3 @@
-
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,33 +12,34 @@ const BuyerDashboard = () => {
   useEffect(() => {
     console.log('=== BUYER DASHBOARD REDIRECT LOGIC ===');
     console.log('Loading:', loading);
-    console.log('User:', user?.id);
-    console.log('Profile:', profile);
+    console.log('User ID:', user?.id);
+    console.log('Full Profile Object:', profile);
     console.log('Profile user_type:', profile?.user_type);
+    console.log('Current URL:', window.location.pathname);
     
     if (!loading) {
       if (!user) {
-        console.log('No user found, redirecting to buyer signin');
+        console.log('❌ No user found, redirecting to buyer signin');
         navigate('/buyer-signin');
         return;
       }
       
       if (profile) {
         if (profile.user_type === 'seller') {
-          console.log('User is a seller, redirecting to seller dashboard');
+          console.log('❌ User is a SELLER trying to access BUYER dashboard');
+          console.log('🔄 Redirecting seller to seller dashboard');
           navigate('/seller-dashboard');
           return;
         } else if (profile.user_type === 'buyer') {
-          console.log('User is confirmed buyer, staying on buyer dashboard');
-          // Do nothing - stay on buyer dashboard
+          console.log('✅ User is confirmed BUYER, staying on buyer dashboard');
           return;
         } else {
-          console.log('Unknown user type:', profile.user_type, 'redirecting to buyer signin');
+          console.log('❌ Unknown user type:', profile.user_type);
           navigate('/buyer-signin');
           return;
         }
       } else {
-        console.log('No profile found, redirecting to buyer signin');
+        console.log('❌ No profile found, redirecting to buyer signin');
         navigate('/buyer-signin');
         return;
       }
@@ -79,8 +79,20 @@ const BuyerDashboard = () => {
   if (profile.user_type !== 'buyer') {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-600">Access denied. Buyers only.</p>
+        <div className="text-center p-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h2>
+          <p className="text-gray-600 mb-4">This area is for buyers only.</p>
+          <p className="text-sm text-gray-500 mb-6">
+            Your account type: <span className="font-semibold">{profile.user_type}</span>
+          </p>
+          <div className="space-x-4">
+            <Link to="/seller-dashboard">
+              <Button>Go to Seller Dashboard</Button>
+            </Link>
+            <Link to="/buyer-signin">
+              <Button variant="outline">Sign up as Buyer</Button>
+            </Link>
+          </div>
         </div>
       </div>
     );
