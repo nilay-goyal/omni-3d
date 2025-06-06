@@ -1,3 +1,4 @@
+
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +11,8 @@ const BuyerDashboard = () => {
   const { user, profile, loading, signOut } = useAuth();
 
   useEffect(() => {
+    console.log('BuyerDashboard useEffect - loading:', loading, 'user:', user?.id, 'profile:', profile);
+    
     if (!loading) {
       if (!user) {
         console.log('No user found, redirecting to buyer signin');
@@ -18,15 +21,17 @@ const BuyerDashboard = () => {
       }
       
       if (profile) {
+        console.log('Profile found:', profile.user_type);
         if (profile.user_type === 'seller') {
           console.log('User is a seller, redirecting to seller dashboard');
           navigate('/seller-dashboard');
           return;
         } else if (profile.user_type !== 'buyer') {
-          console.log('User type not recognized, redirecting to buyer signin');
+          console.log('User type not recognized:', profile.user_type, 'redirecting to buyer signin');
           navigate('/buyer-signin');
           return;
         }
+        console.log('User is confirmed buyer, staying on buyer dashboard');
       }
     }
   }, [user, profile, loading, navigate]);
@@ -51,7 +56,7 @@ const BuyerDashboard = () => {
     );
   }
 
-  if (!user || !profile) {
+  if (!user || !profile || profile.user_type !== 'buyer') {
     return null;
   }
 
@@ -135,6 +140,24 @@ const BuyerDashboard = () => {
             <CardContent>
               <Link to="/messages">
                 <Button className="w-full" variant="outline">View Messages</Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          {/* Browse Marketplace */}
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader>
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mb-4">
+                <Printer className="h-6 w-6 text-orange-600" />
+              </div>
+              <CardTitle className="text-lg sm:text-xl">Marketplace</CardTitle>
+              <CardDescription className="text-sm">
+                Browse pre-printed items available for immediate purchase.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Link to="/marketplace">
+                <Button className="w-full" variant="outline">Browse Items</Button>
               </Link>
             </CardContent>
           </Card>

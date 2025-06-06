@@ -11,6 +11,8 @@ const SellerDashboard = () => {
   const { user, profile, loading, signOut } = useAuth();
 
   useEffect(() => {
+    console.log('SellerDashboard useEffect - loading:', loading, 'user:', user?.id, 'profile:', profile);
+    
     if (!loading) {
       if (!user) {
         console.log('No user found, redirecting to seller signin');
@@ -19,15 +21,17 @@ const SellerDashboard = () => {
       }
       
       if (profile) {
+        console.log('Profile found:', profile.user_type);
         if (profile.user_type === 'buyer') {
           console.log('User is a buyer, redirecting to buyer dashboard');
           navigate('/buyer-dashboard');
           return;
         } else if (profile.user_type !== 'seller') {
-          console.log('User type not recognized, redirecting to seller signin');
+          console.log('User type not recognized:', profile.user_type, 'redirecting to seller signin');
           navigate('/seller-signin');
           return;
         }
+        console.log('User is confirmed seller, staying on seller dashboard');
       }
     }
   }, [user, profile, loading, navigate]);
@@ -52,7 +56,7 @@ const SellerDashboard = () => {
     );
   }
 
-  if (!user || !profile) {
+  if (!user || !profile || profile.user_type !== 'seller') {
     return null;
   }
 
@@ -112,24 +116,13 @@ const SellerDashboard = () => {
               </div>
               <CardTitle className="text-lg sm:text-xl">Your Listings</CardTitle>
               <CardDescription className="text-sm">
-                Create and manage pre-printed items for the marketplace.
+                Create and manage your marketplace listings for pre-printed items.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                <div className="bg-gray-50 p-3 sm:p-4 rounded-lg border-2 border-dashed border-gray-300">
-                  <div className="text-center">
-                    <Package className="h-6 w-6 sm:h-8 sm:w-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-xs sm:text-sm text-gray-500 font-medium">Marketplace listings coming soon!</p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      You'll be able to list pre-printed items for immediate sale.
-                    </p>
-                  </div>
-                </div>
-                <Button className="w-full" variant="outline" disabled>
-                  Create Listing (Coming Soon)
-                </Button>
-              </div>
+              <Link to="/marketplace">
+                <Button className="w-full">Manage Listings</Button>
+              </Link>
             </CardContent>
           </Card>
 
