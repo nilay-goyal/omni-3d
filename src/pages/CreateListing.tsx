@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useEffect } from "react";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import LocationFields from "@/components/LocationFields";
 
 interface Category {
   id: string;
@@ -40,7 +41,8 @@ const CreateListing = () => {
     print_time_hours: '',
     location_city: '',
     location_state: '',
-    location_country: 'Canada'
+    location_country: 'Canada',
+    postal_code: ''
   });
 
   useEffect(() => {
@@ -125,6 +127,7 @@ const CreateListing = () => {
   const handleSubmit = async (isDraft: boolean = false) => {
     if (!user) return;
 
+    // Validate required fields
     if (!formData.title.trim() || !formData.description.trim() || !formData.price) {
       toast({
         title: "Error",
@@ -134,14 +137,25 @@ const CreateListing = () => {
       return;
     }
 
-    // Only require condition for published listings, not drafts
-    if (!isDraft && !formData.condition) {
-      toast({
-        title: "Error",
-        description: "Please select a condition before publishing",
-        variant: "destructive"
-      });
-      return;
+    // Validate location fields for publishing
+    if (!isDraft) {
+      if (!formData.condition) {
+        toast({
+          title: "Error",
+          description: "Please select a condition before publishing",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (!formData.location_country || !formData.location_state || !formData.location_city || !formData.postal_code) {
+        toast({
+          title: "Error",
+          description: "Please complete all location fields before publishing",
+          variant: "destructive"
+        });
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -380,31 +394,16 @@ const CreateListing = () => {
                   </div>
                 </div>
 
-                {/* Location */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Location</h3>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="location_city">City</Label>
-                      <Input
-                        id="location_city"
-                        placeholder="Enter city"
-                        value={formData.location_city}
-                        onChange={(e) => handleInputChange('location_city', e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="location_state">Province/State</Label>
-                      <Input
-                        id="location_state"
-                        placeholder="Enter province/state"
-                        value={formData.location_state}
-                        onChange={(e) => handleInputChange('location_state', e.target.value)}
-                      />
-                    </div>
-                  </div>
-                </div>
+                {/* Location Fields */}
+                <LocationFields 
+                  formData={{
+                    location_country: formData.location_country,
+                    location_state: formData.location_state,
+                    location_city: formData.location_city,
+                    postal_code: formData.postal_code
+                  }}
+                  onFieldChange={handleInputChange}
+                />
               </CardContent>
             </Card>
           </div>
