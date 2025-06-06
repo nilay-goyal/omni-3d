@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -62,7 +61,7 @@ const ChatModal = ({ open, onOpenChange, sellerId, sellerName, listingId, listin
         .from('messages')
         .select(`
           *,
-          sender:sender_id(full_name)
+          sender:profiles!inner(full_name)
         `)
         .or(`and(sender_id.eq.${user.id},receiver_id.eq.${sellerId}),and(sender_id.eq.${sellerId},receiver_id.eq.${user.id})`)
         .eq('listing_id', listingId)
