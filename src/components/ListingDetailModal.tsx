@@ -1,13 +1,14 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { MapPin, Eye, Edit, Calendar, Package, Clock, Ruler, Weight } from "lucide-react";
+import { MapPin, Eye, Edit, Calendar, Package, Clock, Ruler, Weight, MessageCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 
 interface ListingDetailModalProps {
   listingId: string | null;
@@ -30,6 +31,7 @@ interface ListingDetail {
   views_count: number;
   created_at: string;
   is_active: boolean;
+  seller_id: string;
   images: {
     image_url: string;
     is_primary: boolean;
@@ -48,6 +50,7 @@ const ListingDetailModal = ({ listingId, open, onOpenChange }: ListingDetailModa
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { user, profile } = useAuth();
 
   useEffect(() => {
     if (listingId && open) {
@@ -104,6 +107,16 @@ const ListingDetailModal = ({ listingId, open, onOpenChange }: ListingDetailModa
     }
   };
 
+  const handleContactSeller = () => {
+    // For now, just show a toast. In a real app, this would open a messaging interface
+    toast({
+      title: "Contact Seller",
+      description: "Messaging feature coming soon!",
+    });
+  };
+
+  const isOwnListing = user && listing && user.id === listing.seller_id;
+
   if (loading) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -129,13 +142,43 @@ const ListingDetailModal = ({ listingId, open, onOpenChange }: ListingDetailModa
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Image Section */}
             <div className="space-y-4">
-              <div className="aspect-square rounded-lg overflow-hidden bg-gray-100">
-                <img
-                  src={getPrimaryImage(listing.images)}
-                  alt={listing.title}
-                  className="w-full h-full object-cover"
-                />
-              </div>
+              {listing.images && listing.images.length > 0 ? (
+                listing.images.length === 1 ? (
+                  <div className="aspect-square rounded-lg overflow-hidden bg-gray-100">
+                    <img
+                      src={listing.images[0].image_url}
+                      alt={listing.title}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="aspect-square rounded-lg overflow-hidden bg-gray-100">
+                    <Carousel className="w-full h-full">
+                      <CarouselContent>
+                        {listing.images.map((image, index) => (
+                          <CarouselItem key={index}>
+                            <img
+                              src={image.image_url}
+                              alt={image.alt_text || `Image ${index + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                          </CarouselItem>
+                        ))}
+                      </CarouselContent>
+                      {listing.images.length > 1 && (
+                        <>
+                          <CarouselPrevious className="left-2" />
+                          <CarouselNext className="right-2" />
+                        </>
+                      )}
+                    </Carousel>
+                  </div>
+                )
+              ) : (
+                <div className="aspect-square rounded-lg bg-gray-200 flex items-center justify-center">
+                  <span className="text-gray-400">No Image</span>
+                </div>
+              )}
               
               {listing.images && listing.images.length > 1 && (
                 <div className="grid grid-cols-4 gap-2">
@@ -160,9 +203,11 @@ const ListingDetailModal = ({ listingId, open, onOpenChange }: ListingDetailModa
                   {formatPrice(listing.price)}
                 </span>
                 <div className="flex items-center space-x-2">
-                  <Badge variant={listing.is_active ? "default" : "secondary"}>
-                    {listing.is_active ? "Published" : "Draft"}
-                  </Badge>
+                  {isOwnListing && (
+                    <Badge variant={listing.is_active ? "default" : "secondary"}>
+                      {listing.is_active ? "Published" : "Draft"}
+                    </Badge>
+                  )}
                   <Badge variant="outline">{listing.condition}</Badge>
                 </div>
               </div>
@@ -248,14 +293,25 @@ const ListingDetailModal = ({ listingId, open, onOpenChange }: ListingDetailModa
               </div>
 
               {/* Action Button */}
-              <Button 
-                onClick={handleEditClick}
-                className="w-full"
-                size="lg"
-              >
-                <Edit className="h-4 w-4 mr-2" />
-                Edit Listing
-              </Button>
+              {isOwnListing ? (
+                <Button 
+                  onClick={handleEditClick}
+                  className="w-full"
+                  size="lg"
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Listing
+                </Button>
+              ) : (
+                <Button 
+                  onClick={handleContactSeller}
+                  className="w-full"
+                  size="lg"
+                >
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  Contact Seller
+                </Button>
+              )}
             </div>
           </div>
         </div>

@@ -28,6 +28,7 @@ const EditListing = () => {
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [existingImages, setExistingImages] = useState<any[]>([]);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -126,20 +127,43 @@ const EditListing = () => {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
+    processFiles(files);
+  };
 
+  const processFiles = (files: File[]) => {
     const newFiles = [...imageFiles, ...files];
     setImageFiles(newFiles);
 
     // Create previews for new files
-    const newPreviews = [...imagePreviews];
     files.forEach(file => {
       const reader = new FileReader();
       reader.onload = () => {
-        newPreviews.push(reader.result as string);
-        setImagePreviews([...newPreviews]);
+        setImagePreviews(prev => [...prev, reader.result as string]);
       };
       reader.readAsDataURL(file);
     });
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    
+    const files = Array.from(e.dataTransfer.files);
+    const imageFiles = files.filter(file => file.type.startsWith('image/'));
+    
+    if (imageFiles.length > 0) {
+      processFiles(imageFiles);
+    }
   };
 
   const removeImage = (index: number) => {
@@ -529,10 +553,19 @@ const EditListing = () => {
                     </div>
                   )}
 
-                  {/* Upload Area */}
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                  {/* Upload Area with Drag and Drop */}
+                  <div 
+                    className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                      isDragOver 
+                        ? 'border-blue-400 bg-blue-50' 
+                        : 'border-gray-300 hover:border-gray-400'
+                    }`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                  >
                     <div className="space-y-4">
-                      <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                      <Upload className={`mx-auto h-12 w-12 ${isDragOver ? 'text-blue-500' : 'text-gray-400'}`} />
                       <div>
                         <Label htmlFor="image-upload" className="cursor-pointer">
                           <span className="text-blue-600 hover:text-blue-500">Choose files</span>

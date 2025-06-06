@@ -125,14 +125,28 @@ const Marketplace = () => {
     }).format(price);
   };
 
-  const handleListingClick = (listingId: string) => {
-    // Check if the current user is the seller of this listing
+  const handleListingClick = async (listingId: string) => {
     const listing = listings.find(l => l.id === listingId);
-    if (listing && user && profile?.user_type === 'seller') {
-      // For sellers viewing their own listings, open the modal
-      setSelectedListingId(listingId);
-      setModalOpen(true);
+    if (!listing) return;
+
+    // Increment view count
+    try {
+      await supabase
+        .from('marketplace_listings')
+        .update({ views_count: listing.views_count + 1 })
+        .eq('id', listingId);
+      
+      // Update local state
+      setListings(prev => prev.map(l => 
+        l.id === listingId ? { ...l, views_count: l.views_count + 1 } : l
+      ));
+    } catch (error) {
+      console.error('Error updating view count:', error);
     }
+
+    // Open the modal for all users (buyers and sellers)
+    setSelectedListingId(listingId);
+    setModalOpen(true);
   };
 
   if (loading) {
