@@ -57,29 +57,42 @@ const ChatModal = ({ open, onOpenChange, sellerId, sellerName, listingId, listin
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
+      // First, fetch messages
+      const { data: messagesData, error: messagesError } = await supabase
         .from('messages')
-        .select(`
-          *,
-          sender:profiles!inner(full_name)
-        `)
+        .select('*')
         .or(`and(sender_id.eq.${user.id},receiver_id.eq.${sellerId}),and(sender_id.eq.${sellerId},receiver_id.eq.${user.id})`)
         .eq('listing_id', listingId)
         .order('created_at', { ascending: true });
 
-      if (error) throw error;
+      if (messagesError) throw messagesError;
 
-      setMessages(data || []);
-      setHasInitialMessage((data || []).length > 0);
+      // Then, fetch sender profiles for all unique sender IDs
+      const senderIds = [...new Set(messagesData?.map(msg => msg.sender_id) || [])];
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', senderIds);
+
+      if (profilesError) throw profilesError;
+
+      // Combine messages with sender information
+      const messagesWithSenders = messagesData?.map(message => ({
+        ...message,
+        sender: profilesData?.find(profile => profile.id === message.sender_id) || null
+      })) || [];
+
+      setMessages(messagesWithSenders);
+      setHasInitialMessage((messagesWithSenders || []).length > 0);
 
       // If no messages exist, send the initial "Hi, I am interested." message
-      if ((data || []).length === 0) {
+      if ((messagesWithSenders || []).length === 0) {
         await sendInitialMessage();
       }
 
       // Mark messages as read
-      if (data && data.length > 0) {
-        const unreadMessages = data.filter(msg => msg.receiver_id === user.id && !msg.is_read);
+      if (messagesWithSenders && messagesWithSenders.length > 0) {
+        const unreadMessages = messagesWithSenders.filter(msg => msg.receiver_id === user.id && !msg.is_read);
         if (unreadMessages.length > 0) {
           await supabase
             .from('messages')
