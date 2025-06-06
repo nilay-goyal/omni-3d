@@ -1,4 +1,3 @@
-
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,10 +17,16 @@ const BuyerDashboard = () => {
         return;
       }
       
-      if (profile && profile.user_type !== 'buyer') {
-        console.log('User is not a buyer, redirecting to seller dashboard');
-        navigate('/seller-dashboard');
-        return;
+      if (profile) {
+        if (profile.user_type === 'seller') {
+          console.log('User is a seller, redirecting to seller dashboard');
+          navigate('/seller-dashboard');
+          return;
+        } else if (profile.user_type !== 'buyer') {
+          console.log('User type not recognized, redirecting to buyer signin');
+          navigate('/buyer-signin');
+          return;
+        }
       }
     }
   }, [user, profile, loading, navigate]);

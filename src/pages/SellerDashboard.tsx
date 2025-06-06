@@ -18,10 +18,16 @@ const SellerDashboard = () => {
         return;
       }
       
-      if (profile && profile.user_type !== 'seller') {
-        console.log('User is not a seller, redirecting to buyer dashboard');
-        navigate('/buyer-dashboard');
-        return;
+      if (profile) {
+        if (profile.user_type === 'buyer') {
+          console.log('User is a buyer, redirecting to buyer dashboard');
+          navigate('/buyer-dashboard');
+          return;
+        } else if (profile.user_type !== 'seller') {
+          console.log('User type not recognized, redirecting to seller signin');
+          navigate('/seller-signin');
+          return;
+        }
       }
     }
   }, [user, profile, loading, navigate]);
