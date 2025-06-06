@@ -22,10 +22,10 @@ interface MarketplaceListing {
   created_at: string;
   seller: {
     full_name: string;
-  };
+  } | null;
   category: {
     name: string;
-  };
+  } | null;
   images: {
     image_url: string;
     alt_text: string;
@@ -337,7 +337,7 @@ const Marketplace = () => {
                       {listing.location_city}, {listing.location_state}
                     </div>
                     <div>
-                      by {listing.seller.full_name}
+                      by {listing.seller?.full_name || 'Unknown Seller'}
                     </div>
                     {listing.category && (
                       <Badge variant="secondary" className="text-xs">
