@@ -11,8 +11,11 @@ const SellerDashboard = () => {
   const navigate = useNavigate();
   const { user, profile, loading, signOut } = useAuth();
   const [messagesCount, setMessagesCount] = useState(0);
+  const [redirected, setRedirected] = useState(false);
 
   useEffect(() => {
+    if (loading || redirected) return;
+
     console.log('=== SELLER DASHBOARD REDIRECT LOGIC ===');
     console.log('Loading:', loading);
     console.log('User ID:', user?.id);
@@ -20,35 +23,37 @@ const SellerDashboard = () => {
     console.log('Profile user_type:', profile?.user_type);
     console.log('Current URL:', window.location.pathname);
     
-    if (!loading) {
-      if (!user) {
-        console.log('❌ No user found, redirecting to seller signin');
-        navigate('/seller-signin');
-        return;
-      }
-      
-      if (profile) {
-        if (profile.user_type === 'buyer') {
-          console.log('❌ User is a BUYER trying to access SELLER dashboard');
-          console.log('🔄 Redirecting buyer to buyer dashboard');
-          navigate('/buyer-dashboard');
-          return;
-        } else if (profile.user_type === 'seller') {
-          console.log('✅ User is confirmed SELLER, staying on seller dashboard');
-          fetchMessagesCount();
-          return;
-        } else {
-          console.log('❌ Unknown user type:', profile.user_type);
-          navigate('/seller-signin');
-          return;
-        }
-      } else {
-        console.log('❌ No profile found, redirecting to seller signin');
-        navigate('/seller-signin');
-        return;
-      }
+    if (!user) {
+      console.log('❌ No user found, redirecting to seller signin');
+      setRedirected(true);
+      navigate('/seller-signin');
+      return;
     }
-  }, [user, profile, loading, navigate]);
+    
+    if (profile) {
+      if (profile.user_type === 'buyer') {
+        console.log('❌ User is a BUYER trying to access SELLER dashboard');
+        console.log('🔄 Redirecting buyer to buyer dashboard');
+        setRedirected(true);
+        navigate('/buyer-dashboard');
+        return;
+      } else if (profile.user_type === 'seller') {
+        console.log('✅ User is confirmed SELLER, staying on seller dashboard');
+        fetchMessagesCount();
+        return;
+      } else {
+        console.log('❌ Unknown user type:', profile.user_type);
+        setRedirected(true);
+        navigate('/seller-signin');
+        return;
+      }
+    } else if (user) {
+      console.log('❌ No profile found, redirecting to seller signin');
+      setRedirected(true);
+      navigate('/seller-signin');
+      return;
+    }
+  }, [user, profile, loading, navigate, redirected]);
 
   const fetchMessagesCount = async () => {
     if (!user) return;
@@ -87,7 +92,7 @@ const SellerDashboard = () => {
     );
   }
 
-  if (!user || !profile) {
+  if (!user || !profile || redirected) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">

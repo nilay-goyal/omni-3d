@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Upload, Map, MessageCircle, LogOut, Printer } from "lucide-react";
@@ -8,8 +8,11 @@ import { useAuth } from "@/contexts/AuthContext";
 const BuyerDashboard = () => {
   const navigate = useNavigate();
   const { user, profile, loading, signOut } = useAuth();
+  const [redirected, setRedirected] = useState(false);
 
   useEffect(() => {
+    if (loading || redirected) return;
+
     console.log('=== BUYER DASHBOARD REDIRECT LOGIC ===');
     console.log('Loading:', loading);
     console.log('User ID:', user?.id);
@@ -17,34 +20,36 @@ const BuyerDashboard = () => {
     console.log('Profile user_type:', profile?.user_type);
     console.log('Current URL:', window.location.pathname);
     
-    if (!loading) {
-      if (!user) {
-        console.log('❌ No user found, redirecting to buyer signin');
-        navigate('/buyer-signin');
-        return;
-      }
-      
-      if (profile) {
-        if (profile.user_type === 'seller') {
-          console.log('❌ User is a SELLER trying to access BUYER dashboard');
-          console.log('🔄 Redirecting seller to seller dashboard');
-          navigate('/seller-dashboard');
-          return;
-        } else if (profile.user_type === 'buyer') {
-          console.log('✅ User is confirmed BUYER, staying on buyer dashboard');
-          return;
-        } else {
-          console.log('❌ Unknown user type:', profile.user_type);
-          navigate('/buyer-signin');
-          return;
-        }
-      } else {
-        console.log('❌ No profile found, redirecting to buyer signin');
-        navigate('/buyer-signin');
-        return;
-      }
+    if (!user) {
+      console.log('❌ No user found, redirecting to buyer signin');
+      setRedirected(true);
+      navigate('/buyer-signin');
+      return;
     }
-  }, [user, profile, loading, navigate]);
+    
+    if (profile) {
+      if (profile.user_type === 'seller') {
+        console.log('❌ User is a SELLER trying to access BUYER dashboard');
+        console.log('🔄 Redirecting seller to seller dashboard');
+        setRedirected(true);
+        navigate('/seller-dashboard');
+        return;
+      } else if (profile.user_type === 'buyer') {
+        console.log('✅ User is confirmed BUYER, staying on buyer dashboard');
+        return;
+      } else {
+        console.log('❌ Unknown user type:', profile.user_type);
+        setRedirected(true);
+        navigate('/buyer-signin');
+        return;
+      }
+    } else if (user) {
+      console.log('❌ No profile found, redirecting to buyer signin');
+      setRedirected(true);
+      navigate('/buyer-signin');
+      return;
+    }
+  }, [user, profile, loading, navigate, redirected]);
 
   const handleLogout = async () => {
     try {
@@ -66,7 +71,7 @@ const BuyerDashboard = () => {
     );
   }
 
-  if (!user || !profile) {
+  if (!user || !profile || redirected) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
