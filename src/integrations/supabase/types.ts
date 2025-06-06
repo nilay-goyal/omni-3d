@@ -205,6 +205,7 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          unread_messages_count: number | null
           updated_at: string
           user_type: string
         }
@@ -213,6 +214,7 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          unread_messages_count?: number | null
           updated_at?: string
           user_type: string
         }
@@ -221,6 +223,7 @@ export type Database = {
           email?: string
           full_name?: string
           id?: string
+          unread_messages_count?: number | null
           updated_at?: string
           user_type?: string
         }
@@ -264,7 +267,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      reset_unread_messages: {
+        Args: {
+          user_id: string
+          conversation_participant_id: string
+          listing_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

@@ -160,13 +160,20 @@ const UnifiedMessaging = () => {
 
       setMessages(messagesWithSenders);
 
-      // Mark messages as read
+      // Mark messages as read and reset unread count
       const unreadMessages = messagesWithSenders.filter(msg => msg.receiver_id === user.id && !msg.is_read);
       if (unreadMessages.length > 0) {
         await supabase
           .from('messages')
           .update({ is_read: true })
           .in('id', unreadMessages.map(msg => msg.id));
+        
+        // Reset unread count using the database function
+        await supabase.rpc('reset_unread_messages', {
+          user_id: user.id,
+          conversation_participant_id: participantId,
+          listing_id: listingId
+        });
         
         // Refresh conversations to update unread counts
         fetchConversations();

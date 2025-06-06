@@ -9,66 +9,132 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Printer, ArrowLeft } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+
+interface SellerProfileData {
+  business_name?: string;
+  location?: string;
+  price_range?: string;
+  specialties?: string;
+  printer_models?: string;
+  availability_status?: string;
+}
 
 const SellerProfile = () => {
-  const [name, setName] = useState("");
+  const [businessName, setBusinessName] = useState("");
   const [location, setLocation] = useState("");
   const [priceRange, setPriceRange] = useState("");
   const [specialties, setSpecialties] = useState("");
   const [printerModels, setPrinterModels] = useState("");
   const [status, setStatus] = useState("available");
+  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, profile } = useAuth();
 
   useEffect(() => {
-    const userType = localStorage.getItem('userType');
-    if (userType !== 'seller') {
+    if (!user || profile?.user_type !== 'seller') {
       navigate('/seller-signin');
       return;
     }
+    fetchSellerProfile();
+  }, [user, profile, navigate]);
 
-    // Load existing profile data if available
-    const savedProfile = localStorage.getItem('sellerProfile');
-    if (savedProfile) {
-      const profile = JSON.parse(savedProfile);
-      setName(profile.name || "");
-      setLocation(profile.location || "");
-      setPriceRange(profile.priceRange || "");
-      setSpecialties(profile.specialties || "");
-      setPrinterModels(profile.printerModels || "");
-      setStatus(profile.status || "available");
+  const fetchSellerProfile = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('seller_profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
+        throw error;
+      }
+
+      if (data) {
+        setBusinessName(data.business_name || "");
+        setLocation(data.location || "");
+        setPriceRange(data.price_range || "");
+        setSpecialties(data.specialties || "");
+        setPrinterModels(data.printer_models || "");
+        setStatus(data.availability_status || "available");
+      }
+    } catch (error) {
+      console.error('Error fetching seller profile:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load profile data",
+        variant: "destructive",
+      });
+    } finally {
+      setInitialLoading(false);
     }
-  }, [navigate]);
+  };
 
-  const handleSaveProfile = () => {
-    if (!name || !location) {
+  const handleSaveProfile = async () => {
+    if (!user) return;
+
+    if (!businessName || !location) {
       toast({
         title: "Missing Information",
-        description: "Please fill in at least your name and location.",
+        description: "Please fill in at least your business name and location.",
         variant: "destructive",
       });
       return;
     }
 
-    const profile = {
-      name,
-      location,
-      priceRange,
-      specialties,
-      printerModels,
-      status,
-      updatedAt: new Date().toISOString(),
-    };
+    try {
+      setLoading(true);
+      
+      const profileData = {
+        user_id: user.id,
+        business_name: businessName,
+        location,
+        price_range: priceRange,
+        specialties,
+        printer_models: printerModels,
+        availability_status: status,
+      };
 
-    localStorage.setItem('sellerProfile', JSON.stringify(profile));
-    
-    toast({
-      title: "Profile Saved",
-      description: "Your seller profile has been updated successfully.",
-    });
+      const { error } = await supabase
+        .from('seller_profiles')
+        .upsert(profileData);
 
-    navigate('/seller-dashboard');
+      if (error) throw error;
+
+      toast({
+        title: "Profile Saved",
+        description: "Your seller profile has been updated successfully.",
+      });
+
+      navigate('/seller-dashboard');
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save profile. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
+
+  if (initialLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -107,12 +173,12 @@ const SellerProfile = () => {
           <CardContent className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="name">Name *</Label>
+                <Label htmlFor="businessName">Business Name *</Label>
                 <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Your name or business name"
+                  id="businessName"
+                  value={businessName}
+                  onChange={(e) => setBusinessName(e.target.value)}
+                  placeholder="Your business name"
                 />
               </div>
               <div className="space-y-2">
@@ -179,7 +245,9 @@ const SellerProfile = () => {
               <Link to="/seller-dashboard">
                 <Button variant="outline">Cancel</Button>
               </Link>
-              <Button onClick={handleSaveProfile}>Save Profile</Button>
+              <Button onClick={handleSaveProfile} disabled={loading}>
+                {loading ? "Saving..." : "Save Profile"}
+              </Button>
             </div>
           </CardContent>
         </Card>

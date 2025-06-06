@@ -1,13 +1,16 @@
-import { useEffect } from "react";
+
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Settings, Package, MessageCircle, LogOut, Printer, Star } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const SellerDashboard = () => {
   const navigate = useNavigate();
   const { user, profile, loading, signOut } = useAuth();
+  const [messagesCount, setMessagesCount] = useState(0);
 
   useEffect(() => {
     console.log('=== SELLER DASHBOARD REDIRECT LOGIC ===');
@@ -32,6 +35,7 @@ const SellerDashboard = () => {
           return;
         } else if (profile.user_type === 'seller') {
           console.log('✅ User is confirmed SELLER, staying on seller dashboard');
+          fetchMessagesCount();
           return;
         } else {
           console.log('❌ Unknown user type:', profile.user_type);
@@ -45,6 +49,23 @@ const SellerDashboard = () => {
       }
     }
   }, [user, profile, loading, navigate]);
+
+  const fetchMessagesCount = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('unread_messages_count')
+        .eq('id', user.id)
+        .single();
+
+      if (error) throw error;
+      setMessagesCount(data?.unread_messages_count || 0);
+    } catch (error) {
+      console.error('Error fetching messages count:', error);
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -169,10 +190,20 @@ const SellerDashboard = () => {
             <CardHeader>
               <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
                 <MessageCircle className="h-6 w-6 text-purple-600" />
+                {messagesCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full px-2 py-1">
+                    {messagesCount}
+                  </span>
+                )}
               </div>
               <CardTitle className="text-lg sm:text-xl">Messages</CardTitle>
               <CardDescription className="text-sm">
                 Communicate with potential customers about their printing needs.
+                {messagesCount > 0 && (
+                  <span className="block mt-1 text-purple-600 font-medium">
+                    {messagesCount} new message{messagesCount !== 1 ? 's' : ''}
+                  </span>
+                )}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -195,7 +226,7 @@ const SellerDashboard = () => {
                   </div>
                   <div className="ml-3 sm:ml-4">
                     <p className="text-xs sm:text-sm font-medium text-gray-600">Messages Received</p>
-                    <p className="text-lg sm:text-2xl font-bold text-gray-900">0</p>
+                    <p className="text-lg sm:text-2xl font-bold text-gray-900">{messagesCount}</p>
                   </div>
                 </div>
               </CardContent>
