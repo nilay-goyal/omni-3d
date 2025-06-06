@@ -201,28 +201,46 @@ export type Database = {
       }
       profiles: {
         Row: {
+          availability_status: string | null
+          business_name: string | null
           created_at: string
           email: string
           full_name: string
           id: string
+          location: string | null
+          price_range: string | null
+          printer_models: string | null
+          specialties: string | null
           unread_messages_count: number | null
           updated_at: string
           user_type: string
         }
         Insert: {
+          availability_status?: string | null
+          business_name?: string | null
           created_at?: string
           email: string
           full_name: string
           id: string
+          location?: string | null
+          price_range?: string | null
+          printer_models?: string | null
+          specialties?: string | null
           unread_messages_count?: number | null
           updated_at?: string
           user_type: string
         }
         Update: {
+          availability_status?: string | null
+          business_name?: string | null
           created_at?: string
           email?: string
           full_name?: string
           id?: string
+          location?: string | null
+          price_range?: string | null
+          printer_models?: string | null
+          specialties?: string | null
           unread_messages_count?: number | null
           updated_at?: string
           user_type?: string

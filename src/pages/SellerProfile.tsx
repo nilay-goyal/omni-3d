@@ -12,15 +12,6 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 
-interface SellerProfileData {
-  business_name?: string;
-  location?: string;
-  price_range?: string;
-  specialties?: string;
-  printer_models?: string;
-  availability_status?: string;
-}
-
 const SellerProfile = () => {
   const [businessName, setBusinessName] = useState("");
   const [location, setLocation] = useState("");
@@ -47,14 +38,12 @@ const SellerProfile = () => {
 
     try {
       const { data, error } = await supabase
-        .from('seller_profiles')
+        .from('profiles')
         .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
+        .eq('id', user.id)
+        .single();
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
-        throw error;
-      }
+      if (error) throw error;
 
       if (data) {
         setBusinessName(data.business_name || "");
@@ -92,7 +81,6 @@ const SellerProfile = () => {
       setLoading(true);
       
       const profileData = {
-        user_id: user.id,
         business_name: businessName,
         location,
         price_range: priceRange,
@@ -102,8 +90,9 @@ const SellerProfile = () => {
       };
 
       const { error } = await supabase
-        .from('seller_profiles')
-        .upsert(profileData);
+        .from('profiles')
+        .update(profileData)
+        .eq('id', user.id);
 
       if (error) throw error;
 
