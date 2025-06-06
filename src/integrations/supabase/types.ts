@@ -9,6 +9,155 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      marketplace_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      marketplace_images: {
+        Row: {
+          alt_text: string | null
+          created_at: string
+          display_order: number
+          id: string
+          image_url: string
+          is_primary: boolean
+          listing_id: string
+        }
+        Insert: {
+          alt_text?: string | null
+          created_at?: string
+          display_order?: number
+          id?: string
+          image_url: string
+          is_primary?: boolean
+          listing_id: string
+        }
+        Update: {
+          alt_text?: string | null
+          created_at?: string
+          display_order?: number
+          id?: string
+          image_url?: string
+          is_primary?: boolean
+          listing_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_images_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketplace_listings: {
+        Row: {
+          category_id: string | null
+          condition: string
+          created_at: string
+          description: string
+          dimensions: string | null
+          featured: boolean
+          id: string
+          is_active: boolean
+          latitude: number | null
+          location_city: string | null
+          location_country: string | null
+          location_state: string | null
+          longitude: number | null
+          material: string | null
+          price: number
+          print_time_hours: number | null
+          seller_id: string
+          tags: string[] | null
+          title: string
+          updated_at: string
+          views_count: number
+          weight_grams: number | null
+        }
+        Insert: {
+          category_id?: string | null
+          condition: string
+          created_at?: string
+          description: string
+          dimensions?: string | null
+          featured?: boolean
+          id?: string
+          is_active?: boolean
+          latitude?: number | null
+          location_city?: string | null
+          location_country?: string | null
+          location_state?: string | null
+          longitude?: number | null
+          material?: string | null
+          price: number
+          print_time_hours?: number | null
+          seller_id: string
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+          views_count?: number
+          weight_grams?: number | null
+        }
+        Update: {
+          category_id?: string | null
+          condition?: string
+          created_at?: string
+          description?: string
+          dimensions?: string | null
+          featured?: boolean
+          id?: string
+          is_active?: boolean
+          latitude?: number | null
+          location_city?: string | null
+          location_country?: string | null
+          location_state?: string | null
+          longitude?: number | null
+          material?: string | null
+          price?: number
+          print_time_hours?: number | null
+          seller_id?: string
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+          views_count?: number
+          weight_grams?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_listings_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_listings_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
