@@ -6,12 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Printer, Upload, ArrowLeft } from "lucide-react";
+import { Printer, Upload, ArrowLeft, X } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useEffect } from "react";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 
 interface Category {
   id: string;
@@ -24,8 +25,8 @@ const CreateListing = () => {
   const { toast } = useToast();
   const [categories, setCategories] = useState<Category[]>([]);
   const [submitting, setSubmitting] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>('');
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -66,15 +67,29 @@ const CreateListing = () => {
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImageFile(file);
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const newFiles = [...imageFiles, ...files];
+    setImageFiles(newFiles);
+
+    // Create previews for new files
+    const newPreviews = [...imagePreviews];
+    files.forEach(file => {
       const reader = new FileReader();
       reader.onload = () => {
-        setImagePreview(reader.result as string);
+        newPreviews.push(reader.result as string);
+        setImagePreviews([...newPreviews]);
       };
       reader.readAsDataURL(file);
-    }
+    });
+  };
+
+  const removeImage = (index: number) => {
+    const newFiles = imageFiles.filter((_, i) => i !== index);
+    const newPreviews = imagePreviews.filter((_, i) => i !== index);
+    setImageFiles(newFiles);
+    setImagePreviews(newPreviews);
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -135,26 +150,29 @@ const CreateListing = () => {
 
       if (listingError) throw listingError;
 
-      // Upload image if provided
-      if (imageFile && listing) {
-        const fileExt = imageFile.name.split('.').pop();
-        const fileName = `${listing.id}-${Date.now()}.${fileExt}`;
-        const filePath = `listings/${fileName}`;
+      // Upload images if provided
+      if (imageFiles.length > 0 && listing) {
+        for (let i = 0; i < imageFiles.length; i++) {
+          const file = imageFiles[i];
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${listing.id}-${i}-${Date.now()}.${fileExt}`;
+          
+          // For now, we'll store a placeholder URL since we don't have storage set up
+          const imageUrl = imagePreviews[i] || `/placeholder.svg`;
 
-        // For now, we'll store a placeholder URL since we don't have storage set up
-        const imageUrl = `/placeholder.svg`;
+          const { error: imageError } = await supabase
+            .from('marketplace_images')
+            .insert({
+              listing_id: listing.id,
+              image_url: imageUrl,
+              is_primary: i === 0, // First image is primary
+              alt_text: formData.title,
+              display_order: i + 1
+            });
 
-        const { error: imageError } = await supabase
-          .from('marketplace_images')
-          .insert({
-            listing_id: listing.id,
-            image_url: imageUrl,
-            is_primary: true,
-            alt_text: formData.title
-          });
-
-        if (imageError) {
-          console.error('Error saving image record:', imageError);
+          if (imageError) {
+            console.error('Error saving image record:', imageError);
+          }
         }
       }
 
@@ -373,48 +391,84 @@ const CreateListing = () => {
             {/* Image Upload */}
             <Card>
               <CardHeader>
-                <CardTitle>Product Image</CardTitle>
-                <CardDescription>Upload a photo of your item</CardDescription>
+                <CardTitle>Product Images</CardTitle>
+                <CardDescription>Upload photos of your item</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                    {imagePreview ? (
-                      <div className="space-y-4">
-                        <img
-                          src={imagePreview}
-                          alt="Preview"
-                          className="mx-auto h-32 w-32 object-cover rounded-lg"
-                        />
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            setImageFile(null);
-                            setImagePreview('');
-                          }}
-                        >
-                          Remove Image
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                        <div>
-                          <Label htmlFor="image-upload" className="cursor-pointer">
-                            <span className="text-blue-600 hover:text-blue-500">Choose file</span>
-                            <span className="text-gray-600"> or drag and drop</span>
-                          </Label>
-                          <Input
-                            id="image-upload"
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={handleImageChange}
+                  {/* Image Previews with Carousel */}
+                  {imagePreviews.length > 0 && (
+                    <div className="mb-4">
+                      {imagePreviews.length === 1 ? (
+                        <div className="relative">
+                          <img
+                            src={imagePreviews[0]}
+                            alt="Preview"
+                            className="w-full h-48 object-cover rounded-lg"
                           />
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="absolute top-2 right-2"
+                            onClick={() => removeImage(0)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
                         </div>
-                        <p className="text-xs text-gray-500">PNG, JPG up to 10MB</p>
+                      ) : (
+                        <Carousel className="w-full">
+                          <CarouselContent>
+                            {imagePreviews.map((preview, index) => (
+                              <CarouselItem key={index}>
+                                <div className="relative">
+                                  <img
+                                    src={preview}
+                                    alt={`Preview ${index + 1}`}
+                                    className="w-full h-48 object-cover rounded-lg"
+                                  />
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    className="absolute top-2 right-2"
+                                    onClick={() => removeImage(index)}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </CarouselItem>
+                            ))}
+                          </CarouselContent>
+                          {imagePreviews.length > 1 && (
+                            <>
+                              <CarouselPrevious />
+                              <CarouselNext />
+                            </>
+                          )}
+                        </Carousel>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Upload Area */}
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                    <div className="space-y-4">
+                      <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                      <div>
+                        <Label htmlFor="image-upload" className="cursor-pointer">
+                          <span className="text-blue-600 hover:text-blue-500">Choose files</span>
+                          <span className="text-gray-600"> or drag and drop</span>
+                        </Label>
+                        <Input
+                          id="image-upload"
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          className="hidden"
+                          onChange={handleImageChange}
+                        />
                       </div>
-                    )}
+                      <p className="text-xs text-gray-500">PNG, JPG up to 10MB each</p>
+                    </div>
                   </div>
                 </div>
               </CardContent>
