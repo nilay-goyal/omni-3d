@@ -11,7 +11,11 @@ const SellerDashboard = () => {
   const { user, profile, loading, signOut } = useAuth();
 
   useEffect(() => {
-    console.log('SellerDashboard useEffect - loading:', loading, 'user:', user?.id, 'profile:', profile);
+    console.log('=== SELLER DASHBOARD REDIRECT LOGIC ===');
+    console.log('Loading:', loading);
+    console.log('User:', user?.id);
+    console.log('Profile:', profile);
+    console.log('Profile user_type:', profile?.user_type);
     
     if (!loading) {
       if (!user) {
@@ -21,17 +25,23 @@ const SellerDashboard = () => {
       }
       
       if (profile) {
-        console.log('Profile found:', profile.user_type);
         if (profile.user_type === 'buyer') {
           console.log('User is a buyer, redirecting to buyer dashboard');
           navigate('/buyer-dashboard');
           return;
-        } else if (profile.user_type !== 'seller') {
-          console.log('User type not recognized:', profile.user_type, 'redirecting to seller signin');
+        } else if (profile.user_type === 'seller') {
+          console.log('User is confirmed seller, staying on seller dashboard');
+          // Do nothing - stay on seller dashboard
+          return;
+        } else {
+          console.log('Unknown user type:', profile.user_type, 'redirecting to seller signin');
           navigate('/seller-signin');
           return;
         }
-        console.log('User is confirmed seller, staying on seller dashboard');
+      } else {
+        console.log('No profile found, redirecting to seller signin');
+        navigate('/seller-signin');
+        return;
       }
     }
   }, [user, profile, loading, navigate]);
@@ -56,8 +66,24 @@ const SellerDashboard = () => {
     );
   }
 
-  if (!user || !profile || profile.user_type !== 'seller') {
-    return null;
+  if (!user || !profile) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600">Redirecting...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (profile.user_type !== 'seller') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600">Access denied. Sellers only.</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -67,7 +93,7 @@ const SellerDashboard = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Link to="/" className="flex items-center">
-              <Printer className="h-8 w-8 text-blue-600 mr-2" />
+              <Printer className="h-8 w-8 text-green-600 mr-2" />
               <h1 className="text-xl font-bold text-gray-900">Omni3D</h1>
             </Link>
             <div className="flex items-center space-x-2 sm:space-x-4">

@@ -11,7 +11,11 @@ const BuyerDashboard = () => {
   const { user, profile, loading, signOut } = useAuth();
 
   useEffect(() => {
-    console.log('BuyerDashboard useEffect - loading:', loading, 'user:', user?.id, 'profile:', profile);
+    console.log('=== BUYER DASHBOARD REDIRECT LOGIC ===');
+    console.log('Loading:', loading);
+    console.log('User:', user?.id);
+    console.log('Profile:', profile);
+    console.log('Profile user_type:', profile?.user_type);
     
     if (!loading) {
       if (!user) {
@@ -21,17 +25,23 @@ const BuyerDashboard = () => {
       }
       
       if (profile) {
-        console.log('Profile found:', profile.user_type);
         if (profile.user_type === 'seller') {
           console.log('User is a seller, redirecting to seller dashboard');
           navigate('/seller-dashboard');
           return;
-        } else if (profile.user_type !== 'buyer') {
-          console.log('User type not recognized:', profile.user_type, 'redirecting to buyer signin');
+        } else if (profile.user_type === 'buyer') {
+          console.log('User is confirmed buyer, staying on buyer dashboard');
+          // Do nothing - stay on buyer dashboard
+          return;
+        } else {
+          console.log('Unknown user type:', profile.user_type, 'redirecting to buyer signin');
           navigate('/buyer-signin');
           return;
         }
-        console.log('User is confirmed buyer, staying on buyer dashboard');
+      } else {
+        console.log('No profile found, redirecting to buyer signin');
+        navigate('/buyer-signin');
+        return;
       }
     }
   }, [user, profile, loading, navigate]);
@@ -56,8 +66,24 @@ const BuyerDashboard = () => {
     );
   }
 
-  if (!user || !profile || profile.user_type !== 'buyer') {
-    return null;
+  if (!user || !profile) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600">Redirecting...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (profile.user_type !== 'buyer') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600">Access denied. Buyers only.</p>
+        </div>
+      </div>
+    );
   }
 
   return (
