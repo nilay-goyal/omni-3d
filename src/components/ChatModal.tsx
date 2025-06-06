@@ -62,7 +62,7 @@ const ChatModal = ({ open, onOpenChange, sellerId, sellerName, listingId, listin
         .from('messages')
         .select(`
           *,
-          sender:profiles!sender_id(full_name)
+          sender:sender_id(full_name)
         `)
         .or(`and(sender_id.eq.${user.id},receiver_id.eq.${sellerId}),and(sender_id.eq.${sellerId},receiver_id.eq.${user.id})`)
         .eq('listing_id', listingId)
