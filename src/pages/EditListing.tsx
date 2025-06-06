@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,23 +7,24 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Printer, Upload, ArrowLeft } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { useEffect } from "react";
 
 interface Category {
   id: string;
   name: string;
 }
 
-const CreateListing = () => {
+const EditListing = () => {
   const navigate = useNavigate();
+  const { id } = useParams();
   const { user, profile, loading } = useAuth();
   const { toast } = useToast();
   const [categories, setCategories] = useState<Category[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [loadingListing, setLoadingListing] = useState(true);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
 
@@ -47,8 +49,63 @@ const CreateListing = () => {
       return;
     }
     
+    if (user && id) {
+      fetchListing();
+    }
     fetchCategories();
-  }, [user, profile, loading, navigate]);
+  }, [user, profile, loading, navigate, id]);
+
+  const fetchListing = async () => {
+    if (!id) return;
+
+    try {
+      setLoadingListing(true);
+      const { data, error } = await supabase
+        .from('marketplace_listings')
+        .select(`
+          *,
+          images:marketplace_images(image_url, is_primary)
+        `)
+        .eq('id', id)
+        .eq('seller_id', user?.id)
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setFormData({
+          title: data.title || '',
+          description: data.description || '',
+          price: data.price?.toString() || '',
+          category_id: data.category_id || '',
+          condition: data.condition || '',
+          material: data.material || '',
+          dimensions: data.dimensions || '',
+          weight_grams: data.weight_grams?.toString() || '',
+          print_time_hours: data.print_time_hours?.toString() || '',
+          location_city: data.location_city || '',
+          location_state: data.location_state || '',
+          location_country: data.location_country || 'Canada'
+        });
+
+        // Set image preview if exists
+        const primaryImage = data.images?.find((img: any) => img.is_primary);
+        if (primaryImage) {
+          setImagePreview(primaryImage.image_url);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching listing:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load listing",
+        variant: "destructive"
+      });
+      navigate('/seller-listings');
+    } finally {
+      setLoadingListing(false);
+    }
+  };
 
   const fetchCategories = async () => {
     try {
@@ -84,7 +141,7 @@ const CreateListing = () => {
   };
 
   const handleSubmit = async (isDraft: boolean = false) => {
-    if (!user) return;
+    if (!user || !id) return;
 
     if (!formData.title.trim() || !formData.description.trim() || !formData.price) {
       toast({
@@ -98,9 +155,8 @@ const CreateListing = () => {
     setSubmitting(true);
 
     try {
-      // Create the listing with proper is_active status
+      // Update the listing
       const listingData = {
-        seller_id: user.id,
         title: formData.title.trim(),
         description: formData.description.trim(),
         price: parseFloat(formData.price),
@@ -113,51 +169,71 @@ const CreateListing = () => {
         location_city: formData.location_city || null,
         location_state: formData.location_state || null,
         location_country: formData.location_country,
-        is_active: !isDraft // Set to false for drafts, true for published
+        is_active: !isDraft,
+        updated_at: new Date().toISOString()
       };
 
-      const { data: listing, error: listingError } = await supabase
+      const { error: listingError } = await supabase
         .from('marketplace_listings')
-        .insert(listingData)
-        .select()
-        .single();
+        .update(listingData)
+        .eq('id', id)
+        .eq('seller_id', user.id);
 
       if (listingError) throw listingError;
 
-      // Upload image if provided
-      if (imageFile && listing) {
-        const fileExt = imageFile.name.split('.').pop();
-        const fileName = `${listing.id}-${Date.now()}.${fileExt}`;
-        const filePath = `listings/${fileName}`;
-
+      // Update image if a new one was provided
+      if (imageFile) {
         // For now, we'll store a placeholder URL since we don't have storage set up
         const imageUrl = `/placeholder.svg`;
 
-        const { error: imageError } = await supabase
+        // First, update existing primary image or insert new one
+        const { data: existingImages } = await supabase
           .from('marketplace_images')
-          .insert({
-            listing_id: listing.id,
-            image_url: imageUrl,
-            is_primary: true,
-            alt_text: formData.title
-          });
+          .select('id')
+          .eq('listing_id', id)
+          .eq('is_primary', true);
 
-        if (imageError) {
-          console.error('Error saving image record:', imageError);
+        if (existingImages && existingImages.length > 0) {
+          // Update existing primary image
+          const { error: imageError } = await supabase
+            .from('marketplace_images')
+            .update({
+              image_url: imageUrl,
+              alt_text: formData.title
+            })
+            .eq('id', existingImages[0].id);
+
+          if (imageError) {
+            console.error('Error updating image record:', imageError);
+          }
+        } else {
+          // Insert new primary image
+          const { error: imageError } = await supabase
+            .from('marketplace_images')
+            .insert({
+              listing_id: id,
+              image_url: imageUrl,
+              is_primary: true,
+              alt_text: formData.title
+            });
+
+          if (imageError) {
+            console.error('Error saving image record:', imageError);
+          }
         }
       }
 
       toast({
         title: "Success",
-        description: isDraft ? "Listing saved as draft" : "Listing published successfully"
+        description: isDraft ? "Listing updated and saved as draft" : "Listing updated and published successfully"
       });
 
       navigate('/seller-listings');
     } catch (error) {
-      console.error('Error creating listing:', error);
+      console.error('Error updating listing:', error);
       toast({
         title: "Error",
-        description: "Failed to create listing",
+        description: "Failed to update listing",
         variant: "destructive"
       });
     } finally {
@@ -165,7 +241,7 @@ const CreateListing = () => {
     }
   };
 
-  if (loading) {
+  if (loading || loadingListing) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -198,8 +274,8 @@ const CreateListing = () => {
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Create New Listing</h1>
-          <p className="mt-2 text-gray-600">List your 3D printed item in the marketplace</p>
+          <h1 className="text-3xl font-bold text-gray-900">Edit Listing</h1>
+          <p className="mt-2 text-gray-600">Update your 3D printed item listing</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -208,7 +284,7 @@ const CreateListing = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Listing Details</CardTitle>
-                <CardDescription>Provide information about your 3D printed item</CardDescription>
+                <CardDescription>Update information about your 3D printed item</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Basic Information */}
@@ -363,7 +439,7 @@ const CreateListing = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Product Image</CardTitle>
-                <CardDescription>Upload a photo of your item</CardDescription>
+                <CardDescription>Update photo of your item</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -418,7 +494,7 @@ const CreateListing = () => {
                     onClick={() => handleSubmit(false)}
                     disabled={submitting}
                   >
-                    {submitting ? "Publishing..." : "Publish Listing"}
+                    {submitting ? "Updating..." : "Update & Publish"}
                   </Button>
                   
                   <Button
@@ -448,4 +524,4 @@ const CreateListing = () => {
   );
 };
 
-export default CreateListing;
+export default EditListing;

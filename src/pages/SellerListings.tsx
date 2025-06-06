@@ -8,6 +8,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import DeleteConfirmDialog from "@/components/DeleteConfirmDialog";
 
 interface SellerListing {
   id: string;
@@ -33,6 +34,8 @@ const SellerListings = () => {
   const { toast } = useToast();
   const [listings, setListings] = useState<SellerListing[]>([]);
   const [listingsLoading, setListingsLoading] = useState(true);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [listingToDelete, setListingToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && (!user || profile?.user_type !== 'seller')) {
@@ -81,18 +84,23 @@ const SellerListings = () => {
     }
   };
 
-  const handleDeleteListing = async (listingId: string) => {
-    if (!confirm('Are you sure you want to delete this listing?')) return;
+  const handleDeleteClick = (listingId: string) => {
+    setListingToDelete(listingId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!listingToDelete) return;
 
     try {
       const { error } = await supabase
         .from('marketplace_listings')
         .delete()
-        .eq('id', listingId);
+        .eq('id', listingToDelete);
 
       if (error) throw error;
 
-      setListings(listings.filter(listing => listing.id !== listingId));
+      setListings(listings.filter(listing => listing.id !== listingToDelete));
       toast({
         title: "Success",
         description: "Listing deleted successfully"
@@ -104,6 +112,9 @@ const SellerListings = () => {
         description: "Failed to delete listing",
         variant: "destructive"
       });
+    } finally {
+      setDeleteDialogOpen(false);
+      setListingToDelete(null);
     }
   };
 
@@ -134,6 +145,25 @@ const SellerListings = () => {
         variant: "destructive"
       });
     }
+  };
+
+  const handleListingClick = (listingId: string) => {
+    navigate(`/edit-listing/${listingId}`);
+  };
+
+  const handleEditClick = (e: React.MouseEvent, listingId: string) => {
+    e.stopPropagation();
+    navigate(`/edit-listing/${listingId}`);
+  };
+
+  const handleDeleteButtonClick = (e: React.MouseEvent, listingId: string) => {
+    e.stopPropagation();
+    handleDeleteClick(listingId);
+  };
+
+  const handleToggleClick = (e: React.MouseEvent, listingId: string, currentStatus: boolean) => {
+    e.stopPropagation();
+    toggleListingStatus(listingId, currentStatus);
   };
 
   const getPrimaryImage = (images: any[]) => {
@@ -211,7 +241,13 @@ const SellerListings = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {listings.map((listing) => (
-              <Card key={listing.id} className="overflow-hidden">
+              <Card 
+                key={listing.id} 
+                className={`overflow-hidden cursor-pointer transition-all hover:shadow-lg ${
+                  !listing.is_active ? 'opacity-60 bg-gray-50' : ''
+                }`}
+                onClick={() => handleListingClick(listing.id)}
+              >
                 <div className="relative aspect-square">
                   <img
                     src={getPrimaryImage(listing.images)}
@@ -252,21 +288,21 @@ const SellerListings = () => {
                       variant="outline"
                       size="sm"
                       className="flex-1"
-                      onClick={() => toggleListingStatus(listing.id, listing.is_active)}
+                      onClick={(e) => handleToggleClick(e, listing.id, listing.is_active)}
                     >
                       {listing.is_active ? "Unpublish" : "Publish"}
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => navigate(`/edit-listing/${listing.id}`)}
+                      onClick={(e) => handleEditClick(e, listing.id)}
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleDeleteListing(listing.id)}
+                      onClick={(e) => handleDeleteButtonClick(e, listing.id)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -277,6 +313,13 @@ const SellerListings = () => {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleDeleteConfirm}
+      />
     </div>
   );
 };
