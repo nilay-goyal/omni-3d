@@ -158,7 +158,7 @@ const SellerDashboard = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Link to="/marketplace">
+              <Link to="/seller-listings">
                 <Button className="w-full">Manage Listings</Button>
               </Link>
             </CardContent>

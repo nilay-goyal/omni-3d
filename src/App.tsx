@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -17,6 +16,8 @@ import PrinterMap from "./pages/PrinterMap";
 import Messages from "./pages/Messages";
 import SellerMessages from "./pages/SellerMessages";
 import Marketplace from "./pages/Marketplace";
+import SellerListings from "./pages/SellerListings";
+import CreateListing from "./pages/CreateListing";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,8 @@ const App = () => (
             <Route path="/buyer-dashboard" element={<BuyerDashboard />} />
             <Route path="/seller-dashboard" element={<SellerDashboard />} />
             <Route path="/seller-profile" element={<SellerProfile />} />
+            <Route path="/seller-listings" element={<SellerListings />} />
+            <Route path="/create-listing" element={<CreateListing />} />
             <Route path="/upload-file" element={<UploadFile />} />
             <Route path="/printer-map" element={<PrinterMap />} />
             <Route path="/messages" element={<Messages />} />
