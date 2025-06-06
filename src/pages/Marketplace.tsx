@@ -1,54 +1,51 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Printer, Search, MapPin, Filter } from "lucide-react";
+import { Printer, Search, MapPin, Eye, Filter } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import ListingDetailModal from "@/components/ListingDetailModal";
-
-interface MarketplaceListing {
-  id: string;
-  title: string;
-  description: string;
-  price: number;
-  condition: string;
-  location_city: string;
-  location_state: string;
-  views_count: number;
-  created_at: string;
-  seller_id: string;
-  images: {
-    image_url: string;
-    is_primary: boolean;
-  }[];
-  seller: {
-    full_name: string;
-  } | null;
-  category: {
-    name: string;
-  } | null;
-}
 
 interface Category {
   id: string;
   name: string;
 }
 
+interface Listing {
+  id: string;
+  title: string;
+  price: number;
+  condition: string;
+  location_city: string | null;
+  location_state: string | null;
+  views_count: number;
+  created_at: string;
+  is_active: boolean;
+  seller: {
+    full_name: string;
+  } | null;
+  images: {
+    image_url: string;
+    is_primary: boolean;
+  }[];
+  category: {
+    name: string;
+  } | null;
+}
+
 const Marketplace = () => {
   const { user, profile } = useAuth();
-  const { toast } = useToast();
-  const [listings, setListings] = useState<MarketplaceListing[]>([]);
+  const [listings, setListings] = useState<Listing[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [selectedCondition, setSelectedCondition] = useState<string>('');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [selectedCondition, setSelectedCondition] = useState<string>("");
+  const [priceRange, setPriceRange] = useState<{ min: string; max: string }>({ min: "", max: "" });
   const [selectedListingId, setSelectedListingId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -56,43 +53,6 @@ const Marketplace = () => {
     fetchListings();
     fetchCategories();
   }, []);
-
-  const fetchListings = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('marketplace_listings')
-        .select(`
-          id,
-          title,
-          description,
-          price,
-          condition,
-          location_city,
-          location_state,
-          views_count,
-          created_at,
-          seller_id,
-          images:marketplace_images(image_url, is_primary),
-          seller:profiles!seller_id(full_name),
-          category:marketplace_categories(name)
-        `)
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setListings(data || []);
-    } catch (error) {
-      console.error('Error fetching listings:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load marketplace listings",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const fetchCategories = async () => {
     try {
@@ -102,26 +62,56 @@ const Marketplace = () => {
         .order('name');
 
       if (error) throw error;
-      setCategories(data || []);
+      // Filter out any categories with empty or null ids
+      setCategories((data || []).filter(cat => cat.id && cat.id.trim() !== ''));
     } catch (error) {
       console.error('Error fetching categories:', error);
     }
   };
 
-  const handleListingClick = (listing: MarketplaceListing) => {
-    // If the user is the seller of this listing, open the detail modal
-    if (user && listing.seller_id === user.id) {
-      setSelectedListingId(listing.id);
-      setModalOpen(true);
-    } else {
-      // For other users' listings, you could implement a different view
-      // For now, we'll just show a toast
-      toast({
-        title: "Contact Seller",
-        description: "Contact functionality will be implemented soon"
-      });
+  const fetchListings = async () => {
+    try {
+      setLoading(true);
+      let query = supabase
+        .from('marketplace_listings')
+        .select(`
+          id,
+          title,
+          price,
+          condition,
+          location_city,
+          location_state,
+          views_count,
+          created_at,
+          is_active,
+          seller_id,
+          seller:profiles!seller_id(full_name),
+          images:marketplace_images(image_url, is_primary),
+          category:marketplace_categories(name)
+        `)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+      setListings(data || []);
+    } catch (error) {
+      console.error('Error fetching listings:', error);
+    } finally {
+      setLoading(false);
     }
   };
+
+  const filteredListings = listings.filter(listing => {
+    const matchesSearch = listing.title.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = !selectedCategory || listing.category?.name === selectedCategory;
+    const matchesCondition = !selectedCondition || listing.condition === selectedCondition;
+    const matchesPrice = (!priceRange.min || listing.price >= parseFloat(priceRange.min)) &&
+                        (!priceRange.max || listing.price <= parseFloat(priceRange.max));
+    
+    return matchesSearch && matchesCategory && matchesCondition && matchesPrice;
+  });
 
   const getPrimaryImage = (images: any[]) => {
     const primaryImage = images?.find(img => img.is_primary);
@@ -135,14 +125,15 @@ const Marketplace = () => {
     }).format(price);
   };
 
-  const filteredListings = listings.filter(listing => {
-    const matchesSearch = listing.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         listing.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = !selectedCategory || listing.category?.name === selectedCategory;
-    const matchesCondition = !selectedCondition || listing.condition === selectedCondition;
-    
-    return matchesSearch && matchesCategory && matchesCondition;
-  });
+  const handleListingClick = (listingId: string) => {
+    // Check if the current user is the seller of this listing
+    const listing = listings.find(l => l.id === listingId);
+    if (listing && user && profile?.user_type === 'seller') {
+      // For sellers viewing their own listings, open the modal
+      setSelectedListingId(listingId);
+      setModalOpen(true);
+    }
+  };
 
   if (loading) {
     return (
@@ -165,23 +156,15 @@ const Marketplace = () => {
               <Printer className="h-8 w-8 text-green-600 mr-2" />
               <h1 className="text-xl font-bold text-gray-900">Omni3D</h1>
             </Link>
-            <div className="flex items-center space-x-4">
-              {profile ? (
-                <>
-                  <span className="text-gray-700">Welcome, {profile.full_name}</span>
-                  <Link to={profile.user_type === 'seller' ? '/seller-dashboard' : '/buyer-dashboard'}>
-                    <Button variant="outline" size="sm">Dashboard</Button>
-                  </Link>
-                </>
+            <div className="flex space-x-4">
+              {profile?.user_type === 'seller' ? (
+                <Link to="/seller-dashboard">
+                  <Button variant="outline">Seller Dashboard</Button>
+                </Link>
               ) : (
-                <div className="flex items-center space-x-2">
-                  <Link to="/buyer-signin">
-                    <Button variant="outline" size="sm">Sign In as Buyer</Button>
-                  </Link>
-                  <Link to="/seller-signin">
-                    <Button variant="outline" size="sm">Sign In as Seller</Button>
-                  </Link>
-                </div>
+                <Link to="/buyer-dashboard">
+                  <Button variant="outline">Buyer Dashboard</Button>
+                </Link>
               )}
             </div>
           </div>
@@ -191,108 +174,145 @@ const Marketplace = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">3D Marketplace</h1>
-          <p className="text-gray-600">Discover amazing 3D printed items from creators around Canada</p>
+          <h1 className="text-3xl font-bold text-gray-900">3D Print Marketplace</h1>
+          <p className="mt-2 text-gray-600">Discover unique 3D printed items from local sellers</p>
         </div>
 
         {/* Filters */}
-        <div className="mb-8 space-y-4 lg:space-y-0 lg:flex lg:items-center lg:space-x-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Search listings..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          
-          <div className="flex space-x-4">
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-48">
-                <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="All Categories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">All Categories</SelectItem>
-                {categories.map((category) => (
-                  <SelectItem key={category.id} value={category.name}>
-                    {category.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <Card className="mb-6">
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search items..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
 
-            <Select value={selectedCondition} onValueChange={setSelectedCondition}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Any Condition" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Any Condition</SelectItem>
-                <SelectItem value="new">New</SelectItem>
-                <SelectItem value="like_new">Like New</SelectItem>
-                <SelectItem value="good">Good</SelectItem>
-                <SelectItem value="fair">Fair</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+              {/* Category Filter */}
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.name}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Condition Filter */}
+              <Select value={selectedCondition} onValueChange={setSelectedCondition}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Conditions" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Conditions</SelectItem>
+                  <SelectItem value="new">New</SelectItem>
+                  <SelectItem value="like_new">Like New</SelectItem>
+                  <SelectItem value="good">Good</SelectItem>
+                  <SelectItem value="fair">Fair</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Price Range */}
+              <div className="flex space-x-2">
+                <Input
+                  type="number"
+                  placeholder="Min price"
+                  value={priceRange.min}
+                  onChange={(e) => setPriceRange(prev => ({ ...prev, min: e.target.value }))}
+                />
+                <Input
+                  type="number"
+                  placeholder="Max price"
+                  value={priceRange.max}
+                  onChange={(e) => setPriceRange(prev => ({ ...prev, max: e.target.value }))}
+                />
+              </div>
+
+              {/* Clear Filters */}
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSearchTerm("");
+                  setSelectedCategory("");
+                  setSelectedCondition("");
+                  setPriceRange({ min: "", max: "" });
+                }}
+                className="flex items-center"
+              >
+                <Filter className="h-4 w-4 mr-2" />
+                Clear
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Listings Grid */}
         {filteredListings.length === 0 ? (
-          <Card className="text-center py-12">
-            <CardContent>
-              <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                <Printer className="h-8 w-8 text-gray-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No listings found</h3>
-              <p className="text-gray-600">Try adjusting your search or filters</p>
-            </CardContent>
-          </Card>
+          <div className="text-center py-12">
+            <div className="text-gray-500 text-lg">No listings found</div>
+            <p className="text-gray-400 mt-2">Try adjusting your filters or search terms</p>
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredListings.map((listing) => (
               <Card 
                 key={listing.id} 
-                className="overflow-hidden cursor-pointer transition-all hover:shadow-lg"
-                onClick={() => handleListingClick(listing)}
+                className="hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => handleListingClick(listing.id)}
               >
-                <div className="relative aspect-square">
-                  <img
-                    src={getPrimaryImage(listing.images)}
-                    alt={listing.title}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute top-2 right-2">
-                    <Badge variant="outline" className="bg-white/80">
-                      {listing.condition}
-                    </Badge>
-                  </div>
-                  {/* Indicate if this is the user's own listing */}
-                  {user && listing.seller_id === user.id && (
-                    <div className="absolute top-2 left-2">
-                      <Badge className="bg-blue-600">Your Listing</Badge>
+                <CardContent className="p-0">
+                  <div className="aspect-square relative overflow-hidden rounded-t-lg">
+                    <img
+                      src={getPrimaryImage(listing.images)}
+                      alt={listing.title}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute top-2 right-2">
+                      <Badge variant="secondary">{listing.condition}</Badge>
                     </div>
-                  )}
-                </div>
-                <CardContent className="p-4">
-                  <div className="mb-2">
-                    <h3 className="font-semibold text-gray-900 line-clamp-1 mb-1">
-                      {listing.title}
-                    </h3>
-                    <p className="text-lg font-bold text-blue-600">
-                      {formatPrice(listing.price)}
-                    </p>
                   </div>
                   
-                  <div className="flex items-center text-sm text-gray-600 mb-2">
-                    <MapPin className="h-3 w-3 mr-1" />
-                    {listing.location_city}, {listing.location_state}
-                  </div>
-
-                  <div className="flex items-center justify-between text-xs text-gray-500">
-                    <span>{listing.seller?.full_name || 'Unknown Seller'}</span>
-                    <span>{listing.views_count} views</span>
+                  <div className="p-4">
+                    <h3 className="font-semibold text-lg mb-2 line-clamp-2">{listing.title}</h3>
+                    
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-2xl font-bold text-blue-600">
+                        {formatPrice(listing.price)}
+                      </span>
+                      {listing.category && (
+                        <Badge variant="outline">{listing.category.name}</Badge>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center justify-between text-sm text-gray-500">
+                      <div className="flex items-center">
+                        <MapPin className="h-4 w-4 mr-1" />
+                        {listing.location_city && listing.location_state 
+                          ? `${listing.location_city}, ${listing.location_state}`
+                          : 'Location not specified'
+                        }
+                      </div>
+                      <div className="flex items-center">
+                        <Eye className="h-4 w-4 mr-1" />
+                        {listing.views_count}
+                      </div>
+                    </div>
+                    
+                    {listing.seller && (
+                      <div className="mt-2 text-sm text-gray-600">
+                        By {listing.seller.full_name}
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
