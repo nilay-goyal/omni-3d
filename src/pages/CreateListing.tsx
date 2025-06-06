@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -95,6 +96,16 @@ const CreateListing = () => {
       return;
     }
 
+    // Only require condition for published listings, not drafts
+    if (!isDraft && !formData.condition) {
+      toast({
+        title: "Error",
+        description: "Please select a condition before publishing",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -105,7 +116,7 @@ const CreateListing = () => {
         description: formData.description.trim(),
         price: parseFloat(formData.price),
         category_id: formData.category_id || null,
-        condition: formData.condition,
+        condition: formData.condition || '',
         material: formData.material || null,
         dimensions: formData.dimensions || null,
         weight_grams: formData.weight_grams ? parseInt(formData.weight_grams) : null,
@@ -247,7 +258,7 @@ const CreateListing = () => {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="condition">Condition</Label>
+                      <Label htmlFor="condition">Condition *</Label>
                       <Select value={formData.condition} onValueChange={(value) => handleInputChange('condition', value)}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select condition" />
