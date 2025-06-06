@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -65,7 +64,7 @@ const UnifiedMessaging = () => {
           *,
           listing:marketplace_listings(title)
         `)
-        .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id})`)
+        .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
         .order('created_at', { ascending: false });
 
       if (messagesError) throw messagesError;
@@ -76,6 +75,11 @@ const UnifiedMessaging = () => {
           msg.sender_id === user.id ? msg.receiver_id : msg.sender_id
         ) || []
       )];
+
+      if (participantIds.length === 0) {
+        setConversations([]);
+        return;
+      }
 
       // Fetch participant profiles
       const { data: profilesData, error: profilesError } = await supabase
@@ -133,12 +137,19 @@ const UnifiedMessaging = () => {
     if (!user) return;
 
     try {
-      // Fetch messages between user and participant for specific listing
-      const { data: messagesData, error: messagesError } = await supabase
+      // Build the query for messages between user and participant for specific listing
+      let query = supabase
         .from('messages')
         .select('*')
-        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${participantId}),and(sender_id.eq.${participantId},receiver_id.eq.${user.id})`)
-        .eq('listing_id', listingId)
+        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${participantId}),and(sender_id.eq.${participantId},receiver_id.eq.${user.id})`);
+
+      if (listingId) {
+        query = query.eq('listing_id', listingId);
+      } else {
+        query = query.is('listing_id', null);
+      }
+
+      const { data: messagesData, error: messagesError } = await query
         .order('created_at', { ascending: true });
 
       if (messagesError) throw messagesError;
@@ -160,7 +171,7 @@ const UnifiedMessaging = () => {
 
       setMessages(messagesWithSenders);
 
-      // Mark messages as read and reset unread count
+      // Mark messages as read
       const unreadMessages = messagesWithSenders.filter(msg => msg.receiver_id === user.id && !msg.is_read);
       if (unreadMessages.length > 0) {
         await supabase

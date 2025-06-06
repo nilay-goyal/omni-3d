@@ -82,7 +82,8 @@ export const useSellerListings = () => {
       const { error } = await supabase
         .from('marketplace_listings')
         .delete()
-        .eq('id', listingId);
+        .eq('id', listingId)
+        .eq('seller_id', user?.id); // Extra security check
 
       if (error) throw error;
 
@@ -106,7 +107,8 @@ export const useSellerListings = () => {
       const { error } = await supabase
         .from('marketplace_listings')
         .update({ is_active: !currentStatus })
-        .eq('id', listingId);
+        .eq('id', listingId)
+        .eq('seller_id', user?.id); // Extra security check
 
       if (error) throw error;
 

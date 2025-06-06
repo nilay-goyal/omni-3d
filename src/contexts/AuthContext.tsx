@@ -1,22 +1,26 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, Session } from '@supabase/supabase-js';
+import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Profile {
   id: string;
-  user_type: 'buyer' | 'seller';
+  user_type: string;
   full_name: string;
   email: string;
+  business_name?: string;
+  location?: string;
+  price_range?: string;
+  specialties?: string;
+  printer_models?: string;
+  availability_status?: string;
+  unread_messages_count?: number;
 }
 
 interface AuthContextType {
   user: User | null;
-  session: Session | null;
   profile: Profile | null;
   loading: boolean;
-  signUp: (email: string, password: string, fullName: string, userType: 'buyer' | 'seller') => Promise<{ error: any }>;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 }
 
@@ -32,42 +36,26 @@ export const useAuth = () => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set up auth state listener
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchProfile(session.user.id);
+      } else {
+        setLoading(false);
+      }
+    });
+
+    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.id);
-        setSession(session);
         setUser(session?.user ?? null);
-        
         if (session?.user) {
-          // Fetch user profile using type assertion to work around type issues
-          setTimeout(async () => {
-            try {
-              // Use type assertion to bypass TypeScript errors until types are updated
-              const response = await (supabase as any)
-                .from('profiles')
-                .select('id, user_type, full_name, email')
-                .eq('id', session.user.id)
-                .maybeSingle();
-              
-              if (response.error) {
-                console.error('Error fetching profile:', response.error);
-              } else if (response.data) {
-                console.log('Profile loaded:', response.data);
-                setProfile(response.data);
-              } else {
-                console.log('No profile found for user');
-              }
-            } catch (err) {
-              console.error('Profile fetch error:', err);
-            }
-            setLoading(false);
-          }, 0);
+          await fetchProfile(session.user.id);
         } else {
           setProfile(null);
           setLoading(false);
@@ -75,71 +63,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (!session) {
-        setLoading(false);
-      }
-    });
-
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, fullName: string, userType: 'buyer' | 'seller') => {
+  const fetchProfile = async (userId: string) => {
     try {
-      const redirectUrl = `${window.location.origin}/`;
-      
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: redirectUrl,
-          data: {
-            full_name: fullName,
-            user_type: userType
-          }
-        }
-      });
-      
-      return { error };
-    } catch (error) {
-      console.error('Signup error:', error);
-      return { error };
-    }
-  };
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
 
-  const signIn = async (email: string, password: string) => {
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-      
-      return { error };
+      if (error) {
+        console.error('Error fetching profile:', error);
+        setProfile(null);
+      } else {
+        setProfile(data);
+      }
     } catch (error) {
-      console.error('Signin error:', error);
-      return { error };
+      console.error('Error fetching profile:', error);
+      setProfile(null);
+    } finally {
+      setLoading(false);
     }
   };
 
   const signOut = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (error) {
-      console.error('Signout error:', error);
-    }
+    await supabase.auth.signOut();
   };
 
   const value = {
     user,
-    session,
     profile,
     loading,
-    signUp,
-    signIn,
-    signOut
+    signOut,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
