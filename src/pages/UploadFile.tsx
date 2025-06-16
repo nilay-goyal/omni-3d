@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Upload, File, Check, X, Loader2, ArrowLeft, Eye } from "lucide-react";
@@ -45,7 +45,8 @@ const UploadFile = () => {
   // Extract userId to a primitive string to avoid complex type inference
   const userId = user?.id;
 
-  const loadUploadedFiles: () => Promise<void> = useCallback(async () => {
+  // Remove useCallback entirely to avoid circular type inference
+  const loadUploadedFiles = async () => {
     if (!userId) return;
     
     try {
@@ -54,7 +55,7 @@ const UploadFile = () => {
     } catch (error) {
       console.error('Error loading files:', error);
     }
-  }, [userId]);
+  };
 
   useEffect(() => {
     if (!loading) {
@@ -74,7 +75,7 @@ const UploadFile = () => {
         loadUploadedFiles();
       }
     }
-  }, [user, profile, loading, navigate, loadUploadedFiles]);
+  }, [user, profile, loading, navigate, userId]);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -181,15 +182,15 @@ const UploadFile = () => {
     }
   };
 
-  const getFileUrl = useCallback(async (filePath: string): Promise<string | null> => {
+  const getFileUrl = async (filePath: string): Promise<string | null> => {
     const { data } = await supabase.storage
       .from('stl-files')
       .createSignedUrl(filePath, 3600);
     
     return data?.signedUrl || null;
-  }, []);
+  };
 
-  const handlePreview = useCallback(async (file: UploadedFile): Promise<void> => {
+  const handlePreview = async (file: UploadedFile): Promise<void> => {
     try {
       const url = await getFileUrl(file.file_path);
       if (url) {
@@ -203,7 +204,7 @@ const UploadFile = () => {
         variant: "destructive",
       });
     }
-  }, [getFileUrl, toast]);
+  };
 
   function formatFileSize(bytes: number) {
     if (bytes === 0) return '0 Bytes';
