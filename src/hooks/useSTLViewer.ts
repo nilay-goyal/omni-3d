@@ -13,6 +13,11 @@ interface STLViewerState {
 
 const colors = [0x339900, 0xff6b6b, 0x4ecdc4, 0x45b7d1, 0xf9ca24, 0xf0932b, 0xeb4d4b, 0x6c5ce7];
 
+// Type-safe material access
+const isMeshPhongMaterial = (material: THREE.Material | THREE.Material[]): material is THREE.MeshPhongMaterial => {
+  return !Array.isArray(material) && material.type === 'MeshPhongMaterial';
+};
+
 export const useSTLViewer = () => {
   const [state, setState] = useState<STLViewerState>({
     scene: null,
@@ -37,7 +42,7 @@ export const useSTLViewer = () => {
 
     // Scene
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x1a1a1a);
+    scene.background = new THREE.Color(0x222222);
 
     // Camera
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
@@ -255,7 +260,7 @@ export const useSTLViewer = () => {
   }, [state.camera]);
 
   const toggleWireframe = useCallback(() => {
-    if (state.currentMesh) {
+    if (state.currentMesh && isMeshPhongMaterial(state.currentMesh.material)) {
       const newWireframeMode = !state.wireframeMode;
       state.currentMesh.material.wireframe = newWireframeMode;
       setState(prev => ({ ...prev, wireframeMode: newWireframeMode }));
@@ -263,7 +268,7 @@ export const useSTLViewer = () => {
   }, [state.currentMesh, state.wireframeMode]);
 
   const changeColor = useCallback(() => {
-    if (state.currentMesh) {
+    if (state.currentMesh && isMeshPhongMaterial(state.currentMesh.material)) {
       const newColorIndex = (state.colorIndex + 1) % colors.length;
       state.currentMesh.material.color.setHex(colors[newColorIndex]);
       setState(prev => ({ ...prev, colorIndex: newColorIndex }));
