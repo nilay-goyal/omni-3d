@@ -33,6 +33,8 @@ const STLUploadArea: React.FC<STLUploadAreaProps> = ({ onFileSelect }) => {
     
     if (stlFile) {
       onFileSelect(stlFile);
+    } else {
+      console.warn('Please select an STL file');
     }
   }, [onFileSelect]);
 
@@ -40,30 +42,45 @@ const STLUploadArea: React.FC<STLUploadAreaProps> = ({ onFileSelect }) => {
     const file = e.target.files?.[0];
     if (file && file.name.toLowerCase().endsWith('.stl')) {
       onFileSelect(file);
+    } else if (file) {
+      console.warn('Please select an STL file');
     }
   }, [onFileSelect]);
 
   return (
-    <Card className={`transition-all duration-300 ${isDragOver ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}>
+    <Card className={`transition-all duration-300 ${
+      isDragOver 
+        ? 'border-green-500 bg-green-50 dark:bg-green-950' 
+        : 'border-gray-200 hover:border-gray-300'
+    } bg-white/10 backdrop-blur-sm border-3 border-dashed`}>
       <CardContent 
-        className="p-8 text-center cursor-pointer"
+        className="p-10 text-center cursor-pointer"
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={() => document.getElementById('file-input')?.click()}
       >
-        <div className="flex flex-col items-center space-y-4">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+        <div className="flex flex-col items-center space-y-6">
+          <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
             <Upload className="h-8 w-8 text-gray-400" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Upload Your STL File</h3>
-            <p className="text-gray-600 mb-4">Drag and drop your STL file here, or click to browse</p>
-            <Button variant="outline" className="mb-2">
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+              📁 Upload Your STL File
+            </h3>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">
+              Drag and drop your STL file here, or click to browse
+            </p>
+            <Button 
+              variant="default" 
+              className="mb-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 transform hover:-translate-y-0.5 transition-all shadow-lg hover:shadow-xl"
+            >
               <FileText className="mr-2 h-4 w-4" />
               Choose STL File
             </Button>
-            <p className="text-sm text-gray-500">Supports both ASCII and Binary STL formats</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Supports both ASCII and Binary STL formats
+            </p>
           </div>
         </div>
         <input

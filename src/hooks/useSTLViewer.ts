@@ -47,6 +47,7 @@ export const useSTLViewer = () => {
     // Camera
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
     camera.position.set(50, 50, 50);
+    camera.lookAt(0, 0, 0);
 
     // Renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -67,6 +68,18 @@ export const useSTLViewer = () => {
     const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
     directionalLight2.position.set(-100, -100, -100);
     scene.add(directionalLight2);
+
+    // Add a test cube to verify the scene is working
+    const testGeometry = new THREE.BoxGeometry(20, 20, 20);
+    const testMaterial = new THREE.MeshPhongMaterial({ 
+      color: 0x00ff00, 
+      transparent: true, 
+      opacity: 0.3,
+      wireframe: true
+    });
+    const testCube = new THREE.Mesh(testGeometry, testMaterial);
+    scene.add(testCube);
+    console.log('Test cube added to scene');
 
     // Controls
     setupControls(renderer, camera, scene);
@@ -103,13 +116,15 @@ export const useSTLViewer = () => {
     });
 
     renderer.domElement.addEventListener('mousemove', (e) => {
-      if (!isMouseDown || !state.currentMesh) return;
+      if (!isMouseDown) return;
 
       const deltaX = e.clientX - mouseX;
       const deltaY = e.clientY - mouseY;
 
-      state.currentMesh.rotation.y += deltaX * 0.01;
-      state.currentMesh.rotation.x += deltaY * 0.01;
+      if (state.currentMesh) {
+        state.currentMesh.rotation.y += deltaX * 0.01;
+        state.currentMesh.rotation.x += deltaY * 0.01;
+      }
 
       mouseX = e.clientX;
       mouseY = e.clientY;
@@ -123,10 +138,27 @@ export const useSTLViewer = () => {
   };
 
   const loadBinarySTL = (buffer: ArrayBuffer): THREE.BufferGeometry => {
+    console.log('Attempting to load as binary STL');
     const view = new DataView(buffer);
+    
+    if (buffer.byteLength < 84) {
+      throw new Error('File too small to be a valid binary STL');
+    }
+    
     const triangles = view.getUint32(80, true);
+    console.log('Binary STL triangles:', triangles);
+    
+    if (triangles === 0) {
+      throw new Error('No triangles found in binary STL');
+    }
+    
+    const expectedSize = 84 + triangles * 50;
+    if (buffer.byteLength < expectedSize) {
+      throw new Error('File size doesn\'t match expected binary STL format');
+    }
+    
     const geometry = new THREE.BufferGeometry();
-
+    
     const vertices = [];
     const normals = [];
     let offset = 84;
@@ -148,6 +180,8 @@ export const useSTLViewer = () => {
       offset += 50;
     }
 
+    console.log('Binary STL parsed, vertices:', vertices.length / 3);
+
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
     geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
 
@@ -155,8 +189,16 @@ export const useSTLViewer = () => {
   };
 
   const loadTextSTL = (buffer: ArrayBuffer): THREE.BufferGeometry => {
+    console.log('Attempting to load as text STL');
     const text = new TextDecoder().decode(buffer);
     const lines = text.split('\n');
+
+    console.log('First few lines:', lines.slice(0, 5));
+
+    // Check if it's actually a text STL
+    if (!text.toLowerCase().includes('solid')) {
+      throw new Error('Not a valid text STL file');
+    }
 
     const vertices = [];
     const normals = [];
@@ -173,6 +215,7 @@ export const useSTLViewer = () => {
 
           for (let j = 0; j < 3; j++) {
             i++;
+            if (i >= lines.length) break;
             const vertexLine = lines[i].trim();
             const vertexMatch = vertexLine.match(/vertex\s+([\-\d\.e]+)\s+([\-\d\.e]+)\s+([\-\d\.e]+)/);
             if (vertexMatch) {
@@ -186,6 +229,12 @@ export const useSTLViewer = () => {
           }
         }
       }
+    }
+
+    console.log('Text STL parsed, vertices found:', vertices.length / 3);
+
+    if (vertices.length === 0) {
+      throw new Error('No vertices found in text STL');
     }
 
     const geometry = new THREE.BufferGeometry();
@@ -205,10 +254,19 @@ export const useSTLViewer = () => {
   };
 
   const loadFile = useCallback((file: File) => {
+    console.log('Loading file:', file.name, 'Size:', file.size, 'Type:', file.type);
+
+    if (!file.name.toLowerCase().endsWith('.stl')) {
+      console.error('Please select an STL file');
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (e) => {
+      console.log('File read successfully, buffer size:', (e.target?.result as ArrayBuffer).byteLength);
       try {
         const geometry = loadSTL(e.target?.result as ArrayBuffer);
+        console.log('Geometry created, vertices:', geometry.attributes.position.count);
 
         if (state.currentMesh && state.scene) {
           state.scene.remove(state.currentMesh);
@@ -220,21 +278,34 @@ export const useSTLViewer = () => {
         });
 
         const mesh = new THREE.Mesh(geometry, material);
+        console.log('Mesh created');
 
         geometry.computeBoundingBox();
         const box = geometry.boundingBox;
-        if (box) {
+        console.log('Bounding box:', box);
+
+        if (box && box.min && box.max) {
           const center = box.getCenter(new THREE.Vector3());
           const size = box.getSize(new THREE.Vector3());
           const maxDim = Math.max(size.x, size.y, size.z);
-          const scale = 50 / maxDim;
 
-          mesh.position.copy(center).multiplyScalar(-scale);
-          mesh.scale.setScalar(scale);
+          if (maxDim > 0) {
+            const scale = 50 / maxDim;
+            mesh.position.copy(center).multiplyScalar(-scale);
+            mesh.scale.setScalar(scale);
+            console.log('Model scaled and positioned');
+          } else {
+            console.warn('Invalid model dimensions, using default positioning');
+            mesh.position.set(0, 0, 0);
+          }
+        } else {
+          console.warn('Could not compute bounding box, using default positioning');
+          mesh.position.set(0, 0, 0);
         }
 
         if (state.scene) {
           state.scene.add(mesh);
+          console.log('Mesh added to scene');
         }
 
         setState(prev => ({ ...prev, currentMesh: mesh }));
@@ -245,10 +316,18 @@ export const useSTLViewer = () => {
           vertices: geometry.attributes.position.count
         });
 
+        // Reset camera to look at the model
+        resetCamera();
+
       } catch (error) {
         console.error('Error loading STL file:', error);
       }
     };
+
+    reader.onerror = (e) => {
+      console.error('File reading error:', e);
+    };
+
     reader.readAsArrayBuffer(file);
   }, [state.scene, state.currentMesh, state.colorIndex]);
 
