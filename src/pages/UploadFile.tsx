@@ -17,6 +17,10 @@ interface UploadedFile {
   file_path: string;
 }
 
+// Define explicit types to prevent deep inference
+type LoadFilesResult = UploadedFile[] | null;
+type FileUrlResult = string | null;
+
 const UploadFile = () => {
   const [dragActive, setDragActive] = useState(false);
   const [uploadingFiles, setUploadingFiles] = useState<string[]>([]);
@@ -25,6 +29,33 @@ const UploadFile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, profile, loading } = useAuth();
+
+  // Break the complex function into simpler parts
+  const fetchFilesFromDB = async (): Promise<LoadFilesResult> => {
+    if (!user) return null;
+    
+    const { data, error } = await supabase
+      .from('uploaded_files')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error loading files:', error);
+      return null;
+    }
+
+    return data;
+  };
+
+  const loadUploadedFiles = useCallback(async (): Promise<void> => {
+    try {
+      const files = await fetchFilesFromDB();
+      setUploadedFiles(files || []);
+    } catch (error) {
+      console.error('Error loading files:', error);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!loading) {
@@ -44,28 +75,7 @@ const UploadFile = () => {
         loadUploadedFiles();
       }
     }
-  }, [user, profile, loading, navigate]);
-
-  const loadUploadedFiles = useCallback(async () => {
-    if (!user) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from('uploaded_files')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error loading files:', error);
-        return;
-      }
-
-      setUploadedFiles(data || []);
-    } catch (error) {
-      console.error('Error loading files:', error);
-    }
-  }, [user]);
+  }, [user, profile, loading, navigate, loadUploadedFiles]);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -172,7 +182,7 @@ const UploadFile = () => {
     }
   };
 
-  const getFileUrl = useCallback(async (filePath: string) => {
+  const getFileUrl = useCallback(async (filePath: string): Promise<FileUrlResult> => {
     const { data } = await supabase.storage
       .from('stl-files')
       .createSignedUrl(filePath, 3600);
@@ -180,7 +190,7 @@ const UploadFile = () => {
     return data?.signedUrl || null;
   }, []);
 
-  const handlePreview = useCallback(async (file: UploadedFile) => {
+  const handlePreview = useCallback(async (file: UploadedFile): Promise<void> => {
     try {
       const url = await getFileUrl(file.file_path);
       if (url) {
@@ -196,15 +206,15 @@ const UploadFile = () => {
     }
   }, [getFileUrl, toast]);
 
-  const formatFileSize = (bytes: number) => {
+  function formatFileSize(bytes: number) {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
+  }
 
-  const formatDate = (dateString: string) => {
+  function formatDate(dateString: string) {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -212,7 +222,7 @@ const UploadFile = () => {
       hour: '2-digit',
       minute: '2-digit'
     });
-  };
+  }
 
   if (loading) {
     return (
