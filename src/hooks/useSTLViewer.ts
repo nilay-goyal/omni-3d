@@ -1,4 +1,3 @@
-
 import { useState, useRef, useCallback } from 'react';
 import * as THREE from 'three';
 
@@ -68,18 +67,6 @@ export const useSTLViewer = () => {
     const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
     directionalLight2.position.set(-100, -100, -100);
     scene.add(directionalLight2);
-
-    // Add a test cube to verify the scene is working
-    const testGeometry = new THREE.BoxGeometry(20, 20, 20);
-    const testMaterial = new THREE.MeshPhongMaterial({ 
-      color: 0x00ff00, 
-      transparent: true, 
-      opacity: 0.3,
-      wireframe: true
-    });
-    const testCube = new THREE.Mesh(testGeometry, testMaterial);
-    scene.add(testCube);
-    console.log('Test cube added to scene');
 
     // Controls
     setupControls(renderer, camera, scene);

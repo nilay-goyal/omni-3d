@@ -52,7 +52,7 @@ const STLUploadArea: React.FC<STLUploadAreaProps> = ({ onFileSelect }) => {
       isDragOver 
         ? 'border-green-500 bg-green-50 dark:bg-green-950' 
         : 'border-gray-200 hover:border-gray-300'
-    } bg-white/10 backdrop-blur-sm border-3 border-dashed`}>
+    } border-3 border-dashed`}>
       <CardContent 
         className="p-10 text-center cursor-pointer"
         onDragOver={handleDragOver}
