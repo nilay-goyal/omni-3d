@@ -17,9 +17,21 @@ interface UploadedFile {
   file_path: string;
 }
 
-// Define explicit types to prevent deep inference
-type LoadFilesResult = UploadedFile[] | null;
-type FileUrlResult = string | null;
+// Move this function outside the component to avoid circular dependencies
+const fetchFilesFromDatabase = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('uploaded_files')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error loading files:', error);
+    return null;
+  }
+
+  return data;
+};
 
 const UploadFile = () => {
   const [dragActive, setDragActive] = useState(false);
@@ -30,32 +42,16 @@ const UploadFile = () => {
   const { toast } = useToast();
   const { user, profile, loading } = useAuth();
 
-  // Break the complex function into simpler parts
-  const fetchFilesFromDB = async (): Promise<LoadFilesResult> => {
-    if (!user) return null;
+  const loadUploadedFiles = useCallback(async () => {
+    if (!user) return;
     
-    const { data, error } = await supabase
-      .from('uploaded_files')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error loading files:', error);
-      return null;
-    }
-
-    return data;
-  };
-
-  const loadUploadedFiles = useCallback(async (): Promise<void> => {
     try {
-      const files = await fetchFilesFromDB();
+      const files = await fetchFilesFromDatabase(user.id);
       setUploadedFiles(files || []);
     } catch (error) {
       console.error('Error loading files:', error);
     }
-  }, [user]);
+  }, [user?.id]);
 
   useEffect(() => {
     if (!loading) {
@@ -182,7 +178,7 @@ const UploadFile = () => {
     }
   };
 
-  const getFileUrl = useCallback(async (filePath: string): Promise<FileUrlResult> => {
+  const getFileUrl = useCallback(async (filePath: string) => {
     const { data } = await supabase.storage
       .from('stl-files')
       .createSignedUrl(filePath, 3600);
@@ -190,7 +186,7 @@ const UploadFile = () => {
     return data?.signedUrl || null;
   }, []);
 
-  const handlePreview = useCallback(async (file: UploadedFile): Promise<void> => {
+  const handlePreview = useCallback(async (file: UploadedFile) => {
     try {
       const url = await getFileUrl(file.file_path);
       if (url) {
