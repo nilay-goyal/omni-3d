@@ -20,7 +20,7 @@ interface UploadedFile {
 
 const UploadFile = () => {
   const [dragActive, setDragActive] = useState(false);
-  const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
+  const [uploadingFiles, setUploadingFiles] = useState<string[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [previewFile, setPreviewFile] = useState<UploadedFile | null>(null);
   const navigate = useNavigate();
@@ -114,7 +114,7 @@ const UploadFile = () => {
     if (!user || !profile) return;
     
     const fileId = crypto.randomUUID();
-    setUploadingFiles(prev => new Set(prev).add(fileId));
+    setUploadingFiles(prev => [...prev, fileId]);
 
     try {
       const userName = profile.full_name || user.email || 'unknown';
@@ -169,11 +169,7 @@ const UploadFile = () => {
         variant: "destructive",
       });
     } finally {
-      setUploadingFiles(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(fileId);
-        return newSet;
-      });
+      setUploadingFiles(prev => prev.filter(id => id !== fileId));
     }
   };
 
@@ -309,7 +305,7 @@ const UploadFile = () => {
             </Card>
 
             {/* Uploaded Files List */}
-            {(uploadedFiles.length > 0 || uploadingFiles.size > 0) && (
+            {(uploadedFiles.length > 0 || uploadingFiles.length > 0) && (
               <Card>
                 <CardHeader>
                   <CardTitle>Your Files</CardTitle>
@@ -320,7 +316,7 @@ const UploadFile = () => {
                 <CardContent>
                   <div className="space-y-4">
                     {/* Show uploading files */}
-                    {Array.from(uploadingFiles).map((fileId) => (
+                    {uploadingFiles.map((fileId) => (
                       <div key={fileId} className="flex items-center justify-between p-4 border rounded-lg bg-blue-50">
                         <div className="flex items-center space-x-3">
                           <Loader2 className="h-5 w-5 text-blue-600 animate-spin" />
