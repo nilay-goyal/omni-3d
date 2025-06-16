@@ -42,16 +42,19 @@ const UploadFile = () => {
   const { toast } = useToast();
   const { user, profile, loading } = useAuth();
 
-  const loadUploadedFiles = useCallback(async () => {
-    if (!user) return;
+  // Extract userId to a primitive string to avoid complex type inference
+  const userId = user?.id;
+
+  const loadUploadedFiles: () => Promise<void> = useCallback(async () => {
+    if (!userId) return;
     
     try {
-      const files = await fetchFilesFromDatabase(user.id);
+      const files = await fetchFilesFromDatabase(userId);
       setUploadedFiles(files || []);
     } catch (error) {
       console.error('Error loading files:', error);
     }
-  }, [user?.id]);
+  }, [userId]);
 
   useEffect(() => {
     if (!loading) {
@@ -178,7 +181,7 @@ const UploadFile = () => {
     }
   };
 
-  const getFileUrl = useCallback(async (filePath: string) => {
+  const getFileUrl = useCallback(async (filePath: string): Promise<string | null> => {
     const { data } = await supabase.storage
       .from('stl-files')
       .createSignedUrl(filePath, 3600);
@@ -186,7 +189,7 @@ const UploadFile = () => {
     return data?.signedUrl || null;
   }, []);
 
-  const handlePreview = useCallback(async (file: UploadedFile) => {
+  const handlePreview = useCallback(async (file: UploadedFile): Promise<void> => {
     try {
       const url = await getFileUrl(file.file_path);
       if (url) {
