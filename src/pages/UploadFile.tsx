@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,7 +46,7 @@ const UploadFile = () => {
     }
   }, [user, profile, loading, navigate]);
 
-  const loadUploadedFiles = async () => {
+  const loadUploadedFiles = async (): Promise<void> => {
     if (!user) return;
     
     try {
@@ -173,15 +172,15 @@ const UploadFile = () => {
     }
   };
 
-  const getFileUrl = async (filePath: string) => {
+  const getFileUrl = async (filePath: string): Promise<string | null> => {
     const { data } = await supabase.storage
       .from('stl-files')
       .createSignedUrl(filePath, 3600);
     
-    return data?.signedUrl;
+    return data?.signedUrl || null;
   };
 
-  const handlePreview = async (file: UploadedFile) => {
+  const handlePreview = async (file: UploadedFile): Promise<void> => {
     try {
       const url = await getFileUrl(file.file_path);
       if (url) {
