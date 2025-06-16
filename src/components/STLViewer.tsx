@@ -1,9 +1,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
-import * as THREE from 'three';
-import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 interface STLViewerProps {
   fileUrl: string;
@@ -21,6 +18,11 @@ const STLViewer = ({ fileUrl }: STLViewerProps) => {
       try {
         setLoading(true);
         setError(null);
+
+        // Dynamic imports to avoid build issues
+        const THREE = await import('three');
+        const { STLLoader } = await import('three/examples/jsm/loaders/STLLoader.js');
+        const { OrbitControls } = await import('three/examples/jsm/controls/OrbitControls.js');
 
         // Clear previous content
         viewerRef.current!.innerHTML = '';
