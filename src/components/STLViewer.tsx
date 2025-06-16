@@ -1,8 +1,6 @@
 
 import React, { useEffect, useRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { RotateCcw, Grid3x3, Palette } from 'lucide-react';
+import { RotateCcw, Square, Palette } from 'lucide-react';
 import { useSTLViewer } from '@/hooks/useSTLViewer';
 
 interface STLViewerProps {
@@ -35,64 +33,59 @@ const STLViewer: React.FC<STLViewerProps> = ({ file }) => {
   }, [file, loadFile]);
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>🎯 STL Viewer</span>
-            <div className="flex space-x-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
+    <div className="space-y-6">
+      {/* Viewer Container */}
+      <div className="bg-black/30 backdrop-blur-sm rounded-2xl overflow-hidden shadow-2xl">
+        <div 
+          ref={containerRef}
+          className="w-full bg-gray-900 rounded-t-2xl overflow-hidden"
+          style={{ height: '600px' }}
+        />
+        
+        {/* Controls */}
+        <div className="bg-white/10 backdrop-blur-sm p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h4 className="text-white font-semibold">Controls:</h4>
+            <div className="flex flex-wrap gap-2">
+              <button 
                 onClick={resetCamera}
+                className="bg-white/20 border border-white/30 text-white px-4 py-2 rounded-full
+                         hover:bg-white/30 transition-all duration-200 text-sm font-medium"
               >
-                <RotateCcw className="h-4 w-4 mr-1" />
                 🔄 Reset View
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
+              </button>
+              <button 
                 onClick={toggleWireframe}
+                className="bg-white/20 border border-white/30 text-white px-4 py-2 rounded-full
+                         hover:bg-white/30 transition-all duration-200 text-sm font-medium"
               >
-                <Grid3x3 className="h-4 w-4 mr-1" />
                 🔲 {wireframeMode ? 'Solid' : 'Wireframe'}
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
+              </button>
+              <button 
                 onClick={changeColor}
+                className="bg-white/20 border border-white/30 text-white px-4 py-2 rounded-full
+                         hover:bg-white/30 transition-all duration-200 text-sm font-medium"
               >
-                <Palette className="h-4 w-4 mr-1" />
                 🎨 Change Color
-              </Button>
+              </button>
             </div>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div 
-            ref={containerRef}
-            className="w-full h-96 bg-gray-900 rounded-lg overflow-hidden"
-            style={{ minHeight: '600px' }}
-          />
-          <div className="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
-            <p><strong>Controls:</strong> Left mouse = Rotate, Mouse wheel = Zoom</p>
           </div>
-        </CardContent>
-      </Card>
+          <div className="mt-3 text-sm text-white/80">
+            <strong>Mouse:</strong> Left = Rotate, Wheel = Zoom
+          </div>
+        </div>
+      </div>
 
+      {/* File Information */}
       {fileInfo && (
-        <Card>
-          <CardHeader>
-            <CardTitle>File Information</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <p><strong>File:</strong> {fileInfo.name}</p>
-              <p><strong>Size:</strong> {fileInfo.size}</p>
-              <p><strong>Vertices:</strong> {fileInfo.vertices.toLocaleString()}</p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 shadow-lg">
+          <h4 className="text-white font-semibold text-lg mb-4">File Information:</h4>
+          <div className="space-y-2 text-white/90">
+            <p><strong>File:</strong> {fileInfo.name}</p>
+            <p><strong>Size:</strong> {fileInfo.size}</p>
+            <p><strong>Vertices:</strong> {fileInfo.vertices.toLocaleString()}</p>
+          </div>
+        </div>
       )}
     </div>
   );

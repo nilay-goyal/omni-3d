@@ -10,7 +10,8 @@ interface STLViewerState {
   colorIndex: number;
 }
 
-const colors = [0x339900, 0xff6b6b, 0x4ecdc4, 0x45b7d1, 0xf9ca24, 0xf0932b, 0xeb4d4b, 0x6c5ce7];
+// Changed first color to white and reordered the array
+const colors = [0xffffff, 0x339900, 0xff6b6b, 0x4ecdc4, 0x45b7d1, 0xf9ca24, 0xf0932b, 0xeb4d4b, 0x6c5ce7];
 
 // Type-safe material access
 const isMeshPhongMaterial = (material: THREE.Material | THREE.Material[]): material is THREE.MeshPhongMaterial => {
@@ -182,7 +183,6 @@ export const useSTLViewer = () => {
 
     console.log('First few lines:', lines.slice(0, 5));
 
-    // Check if it's actually a text STL
     if (!text.toLowerCase().includes('solid')) {
       throw new Error('Not a valid text STL file');
     }
@@ -255,17 +255,33 @@ export const useSTLViewer = () => {
         const geometry = loadSTL(e.target?.result as ArrayBuffer);
         console.log('Geometry created, vertices:', geometry.attributes.position.count);
 
+        // Remove existing mesh if it exists
         if (state.currentMesh && state.scene) {
           state.scene.remove(state.currentMesh);
+          // Dispose of the old geometry and material to free memory
+          if (state.currentMesh.geometry) {
+            state.currentMesh.geometry.dispose();
+          }
+          if (state.currentMesh.material) {
+            if (Array.isArray(state.currentMesh.material)) {
+              state.currentMesh.material.forEach(mat => mat.dispose());
+            } else {
+              state.currentMesh.material.dispose();
+            }
+          }
+          console.log('Previous mesh removed and disposed');
         }
 
+        // Reset color index to white (first color) for new uploads
+        const newColorIndex = 0;
+
         const material = new THREE.MeshPhongMaterial({
-          color: colors[state.colorIndex],
+          color: colors[newColorIndex],
           shininess: 100
         });
 
         const mesh = new THREE.Mesh(geometry, material);
-        console.log('Mesh created');
+        console.log('New mesh created with white color');
 
         geometry.computeBoundingBox();
         const box = geometry.boundingBox;
@@ -292,10 +308,10 @@ export const useSTLViewer = () => {
 
         if (state.scene) {
           state.scene.add(mesh);
-          console.log('Mesh added to scene');
+          console.log('New mesh added to scene');
         }
 
-        setState(prev => ({ ...prev, currentMesh: mesh }));
+        setState(prev => ({ ...prev, currentMesh: mesh, colorIndex: newColorIndex }));
 
         setFileInfo({
           name: file.name,
@@ -316,7 +332,7 @@ export const useSTLViewer = () => {
     };
 
     reader.readAsArrayBuffer(file);
-  }, [state.scene, state.currentMesh, state.colorIndex]);
+  }, [state.scene, state.currentMesh]);
 
   const resetCamera = useCallback(() => {
     if (state.camera) {
