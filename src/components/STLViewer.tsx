@@ -1,6 +1,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import type * as THREE from 'three';
 
 interface STLViewerProps {
   fileUrl: string;
@@ -19,10 +20,10 @@ const STLViewer = ({ fileUrl }: STLViewerProps) => {
         setLoading(true);
         setError(null);
 
-        // Dynamic imports to avoid build issues
-        const THREE = await import('three');
-        const { STLLoader } = await import('three/examples/jsm/loaders/STLLoader.js');
-        const { OrbitControls } = await import('three/examples/jsm/controls/OrbitControls.js');
+        // Dynamic imports with explicit typing
+        const THREE = (await import('three')) as typeof import('three');
+        const { STLLoader } = (await import('three/examples/jsm/loaders/STLLoader.js')) as { STLLoader: any };
+        const { OrbitControls } = (await import('three/examples/jsm/controls/OrbitControls.js')) as { OrbitControls: any };
 
         // Clear previous content
         viewerRef.current!.innerHTML = '';
@@ -68,7 +69,7 @@ const STLViewer = ({ fileUrl }: STLViewerProps) => {
         
         loader.load(
           fileUrl,
-          (geometry) => {
+          (geometry: THREE.BufferGeometry) => {
             // Center the geometry
             geometry.computeBoundingBox();
             const center = new THREE.Vector3();
@@ -102,10 +103,10 @@ const STLViewer = ({ fileUrl }: STLViewerProps) => {
 
             setLoading(false);
           },
-          (progress) => {
+          (progress: ProgressEvent) => {
             console.log('Loading progress:', (progress.loaded / progress.total) * 100 + '%');
           },
-          (error) => {
+          (error: any) => {
             console.error('Error loading STL:', error);
             setError('Failed to load STL file');
             setLoading(false);

@@ -46,7 +46,7 @@ const UploadFile = () => {
     }
   }, [user, profile, loading, navigate]);
 
-  const loadUploadedFiles = async (): Promise<void> => {
+  const loadUploadedFiles = useCallback(async () => {
     if (!user) return;
     
     try {
@@ -65,7 +65,7 @@ const UploadFile = () => {
     } catch (error) {
       console.error('Error loading files:', error);
     }
-  };
+  }, [user]);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -172,15 +172,15 @@ const UploadFile = () => {
     }
   };
 
-  const getFileUrl = async (filePath: string): Promise<string | null> => {
+  const getFileUrl = useCallback(async (filePath: string) => {
     const { data } = await supabase.storage
       .from('stl-files')
       .createSignedUrl(filePath, 3600);
     
     return data?.signedUrl || null;
-  };
+  }, []);
 
-  const handlePreview = async (file: UploadedFile): Promise<void> => {
+  const handlePreview = useCallback(async (file: UploadedFile) => {
     try {
       const url = await getFileUrl(file.file_path);
       if (url) {
@@ -194,7 +194,7 @@ const UploadFile = () => {
         variant: "destructive",
       });
     }
-  };
+  }, [getFileUrl, toast]);
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
