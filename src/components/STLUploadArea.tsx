@@ -1,6 +1,5 @@
 
 import React, { useCallback, useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Upload, FileText } from 'lucide-react';
 
 interface STLUploadAreaProps {
@@ -49,11 +48,11 @@ const STLUploadArea: React.FC<STLUploadAreaProps> = ({ onFileSelect }) => {
   return (
     <div 
       className={`
-        bg-white/10 backdrop-blur-sm border-3 border-dashed rounded-2xl p-10 text-center cursor-pointer
-        transition-all duration-300 shadow-lg hover:shadow-xl
+        bg-white border-2 border-dashed rounded-xl p-10 text-center cursor-pointer
+        transition-all duration-300 shadow-sm
         ${isDragOver 
-          ? 'border-green-400 bg-green-400/20' 
-          : 'border-white/30 hover:border-white/60 hover:bg-white/15'
+          ? 'border-blue-500 bg-blue-50' 
+          : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
         }
       `}
       onDragOver={handleDragOver}
@@ -62,20 +61,19 @@ const STLUploadArea: React.FC<STLUploadAreaProps> = ({ onFileSelect }) => {
       onClick={() => document.getElementById('file-input')?.click()}
     >
       <div className="flex flex-col items-center space-y-6">
-        <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
-          <Upload className="h-8 w-8 text-white" />
+        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+          <Upload className="h-8 w-8 text-blue-600" />
         </div>
         <div>
-          <h3 className="text-2xl font-bold text-white mb-2">
-            📁 Upload Your STL File
+          <h3 className="text-2xl font-bold text-gray-900 mb-2">
+            Upload Your STL File
           </h3>
-          <p className="text-white/80 mb-6">
+          <p className="text-gray-600 mb-6">
             Drag and drop your STL file here, or click to browse
           </p>
           <button 
-            className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 
-                     text-white px-8 py-4 rounded-full font-bold text-lg transition-all duration-200
-                     transform hover:-translate-y-1 hover:shadow-xl shadow-lg"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-lg font-semibold text-lg 
+                     transition-all duration-200 transform hover:-translate-y-1 hover:shadow-lg shadow-md"
             onClick={(e) => {
               e.stopPropagation();
               document.getElementById('file-input')?.click();
@@ -84,7 +82,7 @@ const STLUploadArea: React.FC<STLUploadAreaProps> = ({ onFileSelect }) => {
             <FileText className="mr-2 h-5 w-5 inline" />
             Choose STL File
           </button>
-          <p className="text-sm text-white/60 mt-4">
+          <p className="text-sm text-gray-500 mt-4">
             Supports both ASCII and Binary STL formats
           </p>
         </div>
