@@ -1,12 +1,15 @@
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import STLUploadArea from '@/components/STLUploadArea';
+import STLViewer from '@/components/STLViewer';
 
 const UploadFile = () => {
   const navigate = useNavigate();
   const { user, profile, loading } = useAuth();
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (loading) return;
@@ -21,6 +24,10 @@ const UploadFile = () => {
       return;
     }
   }, [user, profile, loading, navigate]);
+
+  const handleFileSelect = (file: File) => {
+    setSelectedFile(file);
+  };
 
   if (loading) {
     return (
@@ -48,8 +55,17 @@ const UploadFile = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Upload STL Files</h1>
-          <p className="mt-2 text-gray-600">Upload functionality will be rebuilt</p>
+          <h1 className="text-3xl font-bold text-gray-900">STL File Viewer</h1>
+          <p className="mt-2 text-gray-600">Upload and preview your 3D STL files</p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div>
+            <STLUploadArea onFileSelect={handleFileSelect} />
+          </div>
+          <div>
+            <STLViewer file={selectedFile} />
+          </div>
         </div>
       </div>
     </div>
