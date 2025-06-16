@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -172,7 +173,7 @@ const UploadFile = () => {
     }
   };
 
-  const getFileUrl = async (filePath: string): Promise<string | undefined> => {
+  const getFileUrl = async (filePath: string) => {
     const { data } = await supabase.storage
       .from('stl-files')
       .createSignedUrl(filePath, 3600);
