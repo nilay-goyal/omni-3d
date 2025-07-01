@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -43,8 +44,8 @@ const Marketplace = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
-  const [selectedCondition, setSelectedCondition] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedCondition, setSelectedCondition] = useState<string>("all");
   const [priceRange, setPriceRange] = useState<{ min: string; max: string }>({ min: "", max: "" });
   const [selectedListingId, setSelectedListingId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -79,7 +80,8 @@ const Marketplace = () => {
       console.log('Starting to fetch listings...');
       setLoading(true);
       
-      const { data, error } = await supabase
+      // Simplified query to avoid timeout
+      const { data: listingsData, error: listingsError } = await supabase
         .from('marketplace_listings')
         .select(`
           id,
@@ -92,26 +94,66 @@ const Marketplace = () => {
           created_at,
           is_active,
           seller_id,
-          seller:profiles!seller_id(full_name),
-          images:marketplace_images(image_url, is_primary),
-          category:marketplace_categories(name)
+          category_id
         `)
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
-      console.log('Raw listings data:', data);
-      console.log('Listings query error:', error);
-
-      if (error) {
-        console.error('Supabase error fetching listings:', error);
-        throw error;
+      if (listingsError) {
+        console.error('Supabase error fetching listings:', listingsError);
+        throw listingsError;
       }
-      
-      console.log(`Found ${data?.length || 0} listings`);
-      setListings(data || []);
+
+      console.log('Listings data fetched:', listingsData);
+
+      // Fetch additional data separately to avoid join complexity
+      const enrichedListings = await Promise.all(
+        (listingsData || []).map(async (listing) => {
+          try {
+            // Fetch seller info
+            const { data: sellerData } = await supabase
+              .from('profiles')
+              .select('full_name')
+              .eq('id', listing.seller_id)
+              .single();
+
+            // Fetch category info
+            const { data: categoryData } = await supabase
+              .from('marketplace_categories')
+              .select('name')
+              .eq('id', listing.category_id)
+              .single();
+
+            // Fetch images
+            const { data: imagesData } = await supabase
+              .from('marketplace_images')
+              .select('image_url, is_primary')
+              .eq('listing_id', listing.id)
+              .order('is_primary', { ascending: false });
+
+            return {
+              ...listing,
+              seller: sellerData,
+              category: categoryData,
+              images: imagesData || []
+            };
+          } catch (error) {
+            console.error('Error enriching listing:', listing.id, error);
+            return {
+              ...listing,
+              seller: null,
+              category: null,
+              images: []
+            };
+          }
+        })
+      );
+
+      console.log(`Found ${enrichedListings.length} listings`);
+      setListings(enrichedListings);
     } catch (error) {
       console.error('Error fetching listings:', error);
-      // Don't clear listings on error, keep existing ones
+      setListings([]);
     } finally {
       setLoading(false);
     }
@@ -119,8 +161,8 @@ const Marketplace = () => {
 
   const filteredListings = listings.filter(listing => {
     const matchesSearch = !searchTerm || listing.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = !selectedCategory || selectedCategory === "all" || listing.category?.name === selectedCategory;
-    const matchesCondition = !selectedCondition || selectedCondition === "all" || listing.condition === selectedCondition;
+    const matchesCategory = selectedCategory === "all" || listing.category?.name === selectedCategory;
+    const matchesCondition = selectedCondition === "all" || listing.condition === selectedCondition;
     const matchesPrice = (!priceRange.min || listing.price >= parseFloat(priceRange.min)) &&
                         (!priceRange.max || listing.price <= parseFloat(priceRange.max));
     
@@ -230,7 +272,7 @@ const Marketplace = () => {
                   <SelectValue placeholder="All Categories" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Categories</SelectItem>
+                  <SelectItem value="all">All Categories</SelectItem>
                   {categories.map((category) => (
                     <SelectItem key={category.id} value={category.name}>
                       {category.name}
@@ -245,7 +287,7 @@ const Marketplace = () => {
                   <SelectValue placeholder="All Conditions" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Conditions</SelectItem>
+                  <SelectItem value="all">All Conditions</SelectItem>
                   <SelectItem value="new">New</SelectItem>
                   <SelectItem value="like_new">Like New</SelectItem>
                   <SelectItem value="good">Good</SelectItem>
@@ -274,8 +316,8 @@ const Marketplace = () => {
                 variant="outline"
                 onClick={() => {
                   setSearchTerm("");
-                  setSelectedCategory("");
-                  setSelectedCondition("");
+                  setSelectedCategory("all");
+                  setSelectedCondition("all");
                   setPriceRange({ min: "", max: "" });
                 }}
                 className="flex items-center"
