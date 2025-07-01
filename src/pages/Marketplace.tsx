@@ -50,19 +50,24 @@ const Marketplace = () => {
   const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
+    console.log('Marketplace component mounted, fetching data...');
     fetchListings();
     fetchCategories();
   }, []);
 
   const fetchCategories = async () => {
     try {
+      console.log('Fetching categories...');
       const { data, error } = await supabase
         .from('marketplace_categories')
         .select('id, name')
         .order('name');
 
-      if (error) throw error;
-      // Filter out any categories with empty or null ids
+      if (error) {
+        console.error('Error fetching categories:', error);
+        throw error;
+      }
+      console.log('Categories fetched:', data);
       setCategories((data || []).filter(cat => cat.id && cat.id.trim() !== ''));
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -71,8 +76,10 @@ const Marketplace = () => {
 
   const fetchListings = async () => {
     try {
+      console.log('Starting to fetch listings...');
       setLoading(true);
-      let query = supabase
+      
+      const { data, error } = await supabase
         .from('marketplace_listings')
         .select(`
           id,
@@ -92,26 +99,36 @@ const Marketplace = () => {
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
-      const { data, error } = await query;
+      console.log('Raw listings data:', data);
+      console.log('Listings query error:', error);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error fetching listings:', error);
+        throw error;
+      }
+      
+      console.log(`Found ${data?.length || 0} listings`);
       setListings(data || []);
     } catch (error) {
       console.error('Error fetching listings:', error);
+      // Don't clear listings on error, keep existing ones
     } finally {
       setLoading(false);
     }
   };
 
   const filteredListings = listings.filter(listing => {
-    const matchesSearch = listing.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = !selectedCategory || listing.category?.name === selectedCategory;
-    const matchesCondition = !selectedCondition || listing.condition === selectedCondition;
+    const matchesSearch = !searchTerm || listing.title.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = !selectedCategory || selectedCategory === "all" || listing.category?.name === selectedCategory;
+    const matchesCondition = !selectedCondition || selectedCondition === "all" || listing.condition === selectedCondition;
     const matchesPrice = (!priceRange.min || listing.price >= parseFloat(priceRange.min)) &&
                         (!priceRange.max || listing.price <= parseFloat(priceRange.max));
     
     return matchesSearch && matchesCategory && matchesCondition && matchesPrice;
   });
+
+  console.log('Filtered listings count:', filteredListings.length);
+  console.log('Applied filters:', { searchTerm, selectedCategory, selectedCondition, priceRange });
 
   const getPrimaryImage = (images: any[]) => {
     const primaryImage = images?.find(img => img.is_primary);
@@ -144,7 +161,6 @@ const Marketplace = () => {
       console.error('Error updating view count:', error);
     }
 
-    // Open the modal for all users (buyers and sellers)
     setSelectedListingId(listingId);
     setModalOpen(true);
   };
@@ -190,6 +206,7 @@ const Marketplace = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">3D Print Marketplace</h1>
           <p className="mt-2 text-gray-600">Discover unique 3D printed items from local sellers</p>
+          <p className="mt-1 text-sm text-gray-500">Showing {filteredListings.length} of {listings.length} listings</p>
         </div>
 
         {/* Filters */}
@@ -213,7 +230,7 @@ const Marketplace = () => {
                   <SelectValue placeholder="All Categories" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
+                  <SelectItem value="">All Categories</SelectItem>
                   {categories.map((category) => (
                     <SelectItem key={category.id} value={category.name}>
                       {category.name}
@@ -228,7 +245,7 @@ const Marketplace = () => {
                   <SelectValue placeholder="All Conditions" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Conditions</SelectItem>
+                  <SelectItem value="">All Conditions</SelectItem>
                   <SelectItem value="new">New</SelectItem>
                   <SelectItem value="like_new">Like New</SelectItem>
                   <SelectItem value="good">Good</SelectItem>
@@ -270,11 +287,39 @@ const Marketplace = () => {
           </CardContent>
         </Card>
 
+        {/* Debug Info */}
+        {listings.length === 0 && !loading && (
+          <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="text-yellow-800 text-sm">
+              No listings found in database. This could be due to:
+            </p>
+            <ul className="text-yellow-700 text-xs mt-2 ml-4 list-disc">
+              <li>No listings have been created yet</li>
+              <li>All listings are marked as inactive</li>
+              <li>Database connection issues</li>
+            </ul>
+          </div>
+        )}
+
         {/* Listings Grid */}
         {filteredListings.length === 0 ? (
           <div className="text-center py-12">
-            <div className="text-gray-500 text-lg">No listings found</div>
-            <p className="text-gray-400 mt-2">Try adjusting your filters or search terms</p>
+            <div className="text-gray-500 text-lg">
+              {listings.length === 0 ? 'No listings available' : 'No listings match your filters'}
+            </div>
+            <p className="text-gray-400 mt-2">
+              {listings.length === 0 
+                ? 'Check back later for new items or browse our seller dashboard to create listings' 
+                : 'Try adjusting your filters or search terms'
+              }
+            </p>
+            {listings.length === 0 && (
+              <div className="mt-4">
+                <Button onClick={fetchListings} variant="outline">
+                  Refresh Listings
+                </Button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
