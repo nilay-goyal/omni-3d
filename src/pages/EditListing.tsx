@@ -91,8 +91,8 @@ const EditListing = () => {
           location_city: data.location_city || '',
           location_state: data.location_state || '',
           location_country: data.location_country || 'Canada',
-          postal_code: data.postal_code || '',
-          street_address: data.street_address || ''
+          postal_code: (data as any).postal_code || '',
+          street_address: (data as any).street_address || ''
         });
 
         // Set existing images

@@ -84,9 +84,11 @@ export type Database = {
           location_state: string | null
           longitude: number | null
           material: string | null
+          postal_code: string | null
           price: number
           print_time_hours: number | null
           seller_id: string
+          street_address: string | null
           tags: string[] | null
           title: string
           updated_at: string
@@ -108,9 +110,11 @@ export type Database = {
           location_state?: string | null
           longitude?: number | null
           material?: string | null
+          postal_code?: string | null
           price: number
           print_time_hours?: number | null
           seller_id: string
+          street_address?: string | null
           tags?: string[] | null
           title: string
           updated_at?: string
@@ -132,9 +136,11 @@ export type Database = {
           location_state?: string | null
           longitude?: number | null
           material?: string | null
+          postal_code?: string | null
           price?: number
           print_time_hours?: number | null
           seller_id?: string
+          street_address?: string | null
           tags?: string[] | null
           title?: string
           updated_at?: string
@@ -208,9 +214,14 @@ export type Database = {
           full_name: string
           id: string
           location: string | null
+          location_city: string | null
+          location_country: string | null
+          location_state: string | null
+          postal_code: string | null
           price_range: string | null
           printer_models: string | null
           specialties: string | null
+          street_address: string | null
           unread_messages_count: number | null
           updated_at: string
           user_type: string
@@ -223,9 +234,14 @@ export type Database = {
           full_name: string
           id: string
           location?: string | null
+          location_city?: string | null
+          location_country?: string | null
+          location_state?: string | null
+          postal_code?: string | null
           price_range?: string | null
           printer_models?: string | null
           specialties?: string | null
+          street_address?: string | null
           unread_messages_count?: number | null
           updated_at?: string
           user_type: string
@@ -238,9 +254,14 @@ export type Database = {
           full_name?: string
           id?: string
           location?: string | null
+          location_city?: string | null
+          location_country?: string | null
+          location_state?: string | null
+          postal_code?: string | null
           price_range?: string | null
           printer_models?: string | null
           specialties?: string | null
+          street_address?: string | null
           unread_messages_count?: number | null
           updated_at?: string
           user_type?: string
