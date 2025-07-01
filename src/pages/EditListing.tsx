@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import LocationFields from "@/components/LocationFields";
 
 interface Category {
   id: string;
@@ -42,7 +43,9 @@ const EditListing = () => {
     print_time_hours: '',
     location_city: '',
     location_state: '',
-    location_country: 'Canada'
+    location_country: 'Canada',
+    postal_code: '',
+    street_address: ''
   });
 
   useEffect(() => {
@@ -87,7 +90,9 @@ const EditListing = () => {
           print_time_hours: data.print_time_hours?.toString() || '',
           location_city: data.location_city || '',
           location_state: data.location_state || '',
-          location_country: data.location_country || 'Canada'
+          location_country: data.location_country || 'Canada',
+          postal_code: data.postal_code || '',
+          street_address: data.street_address || ''
         });
 
         // Set existing images
@@ -202,14 +207,25 @@ const EditListing = () => {
       return;
     }
 
-    // Only require condition for published listings, not drafts
-    if (!isDraft && !formData.condition) {
-      toast({
-        title: "Error",
-        description: "Please select a condition before publishing",
-        variant: "destructive"
-      });
-      return;
+    // Only require condition and complete location for published listings, not drafts
+    if (!isDraft) {
+      if (!formData.condition) {
+        toast({
+          title: "Error",
+          description: "Please select a condition before publishing",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (!formData.location_country || !formData.location_state || !formData.location_city || !formData.postal_code || !formData.street_address) {
+        toast({
+          title: "Error",
+          description: "Please complete all location fields including street address before publishing",
+          variant: "destructive"
+        });
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -229,6 +245,8 @@ const EditListing = () => {
         location_city: formData.location_city || null,
         location_state: formData.location_state || null,
         location_country: formData.location_country,
+        street_address: formData.street_address || null,
+        postal_code: formData.postal_code || null,
         is_active: !isDraft,
         updated_at: new Date().toISOString()
       };
@@ -461,31 +479,17 @@ const EditListing = () => {
                   </div>
                 </div>
 
-                {/* Location */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Location</h3>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="location_city">City</Label>
-                      <Input
-                        id="location_city"
-                        placeholder="Enter city"
-                        value={formData.location_city}
-                        onChange={(e) => handleInputChange('location_city', e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="location_state">Province/State</Label>
-                      <Input
-                        id="location_state"
-                        placeholder="Enter province/state"
-                        value={formData.location_state}
-                        onChange={(e) => handleInputChange('location_state', e.target.value)}
-                      />
-                    </div>
-                  </div>
-                </div>
+                {/* Location Fields */}
+                <LocationFields 
+                  formData={{
+                    location_country: formData.location_country,
+                    location_state: formData.location_state,
+                    location_city: formData.location_city,
+                    postal_code: formData.postal_code,
+                    street_address: formData.street_address
+                  }}
+                  onFieldChange={handleInputChange}
+                />
               </CardContent>
             </Card>
           </div>

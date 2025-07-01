@@ -11,10 +11,10 @@ import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import LocationFields from "@/components/LocationFields";
 
 const SellerProfile = () => {
   const [businessName, setBusinessName] = useState("");
-  const [location, setLocation] = useState("");
   const [priceRange, setPriceRange] = useState("");
   const [specialties, setSpecialties] = useState("");
   const [printerModels, setPrinterModels] = useState("");
@@ -24,6 +24,14 @@ const SellerProfile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, profile } = useAuth();
+
+  const [locationData, setLocationData] = useState({
+    location_country: 'Canada',
+    location_state: '',
+    location_city: '',
+    postal_code: '',
+    street_address: ''
+  });
 
   useEffect(() => {
     if (!user || profile?.user_type !== 'seller') {
@@ -47,11 +55,32 @@ const SellerProfile = () => {
 
       if (data) {
         setBusinessName(data.business_name || "");
-        setLocation(data.location || "");
         setPriceRange(data.price_range || "");
         setSpecialties(data.specialties || "");
         setPrinterModels(data.printer_models || "");
         setStatus(data.availability_status || "available");
+        
+        // Parse location data - handle both old and new format
+        if (data.location) {
+          // Old format - single location string
+          const locationParts = data.location.split(', ');
+          setLocationData({
+            location_country: data.location_country || 'Canada',
+            location_state: data.location_state || (locationParts[1] || ''),
+            location_city: data.location_city || (locationParts[0] || ''),
+            postal_code: data.postal_code || '',
+            street_address: data.street_address || ''
+          });
+        } else {
+          // New format - separate fields
+          setLocationData({
+            location_country: data.location_country || 'Canada',
+            location_state: data.location_state || '',
+            location_city: data.location_city || '',
+            postal_code: data.postal_code || '',
+            street_address: data.street_address || ''
+          });
+        }
       }
     } catch (error) {
       console.error('Error fetching seller profile:', error);
@@ -65,13 +94,35 @@ const SellerProfile = () => {
     }
   };
 
+  const handleLocationFieldChange = (field: string, value: string) => {
+    setLocationData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
   const handleSaveProfile = async () => {
     if (!user) return;
 
-    if (!businessName || !location) {
+    // Validate required fields
+    if (!businessName.trim()) {
       toast({
         title: "Missing Information",
-        description: "Please fill in at least your business name and location.",
+        description: "Please enter your business name.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate all location fields are filled
+    if (!locationData.street_address.trim() || 
+        !locationData.location_city.trim() || 
+        !locationData.location_state.trim() || 
+        !locationData.location_country.trim() || 
+        !locationData.postal_code.trim()) {
+      toast({
+        title: "Missing Location Information",
+        description: "Please complete all location fields including your street address.",
         variant: "destructive",
       });
       return;
@@ -80,13 +131,22 @@ const SellerProfile = () => {
     try {
       setLoading(true);
       
+      // Create full address string for backward compatibility
+      const fullAddress = `${locationData.street_address}, ${locationData.location_city}, ${locationData.location_state}, ${locationData.postal_code}`;
+      
       const profileData = {
         business_name: businessName,
-        location,
+        location: fullAddress, // Keep for backward compatibility
         price_range: priceRange,
         specialties,
         printer_models: printerModels,
         availability_status: status,
+        // New individual location fields
+        location_country: locationData.location_country,
+        location_state: locationData.location_state,
+        location_city: locationData.location_city,
+        postal_code: locationData.postal_code,
+        street_address: locationData.street_address,
       };
 
       const { error } = await supabase
@@ -149,7 +209,7 @@ const SellerProfile = () => {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Seller Profile Setup</h1>
-          <p className="mt-2 text-gray-600">Complete your profile to help buyers find and connect with you.</p>
+          <p className="mt-2 text-gray-600">Complete your profile to help buyers find and connect with you. All location fields are required.</p>
         </div>
 
         <Card>
@@ -160,26 +220,22 @@ const SellerProfile = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="businessName">Business Name *</Label>
-                <Input
-                  id="businessName"
-                  value={businessName}
-                  onChange={(e) => setBusinessName(e.target.value)}
-                  placeholder="Your business name"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="location">Location *</Label>
-                <Input
-                  id="location"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="City, State"
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="businessName">Business Name *</Label>
+              <Input
+                id="businessName"
+                value={businessName}
+                onChange={(e) => setBusinessName(e.target.value)}
+                placeholder="Your business name"
+                required
+              />
             </div>
+
+            {/* Location Fields Component */}
+            <LocationFields 
+              formData={locationData}
+              onFieldChange={handleLocationFieldChange}
+            />
 
             <div className="space-y-2">
               <Label htmlFor="priceRange">Price Range</Label>
