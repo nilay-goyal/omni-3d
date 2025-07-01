@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,25 +59,25 @@ const SellerProfile = () => {
         setPrinterModels(data.printer_models || "");
         setStatus(data.availability_status || "available");
         
-        // Parse location data - handle both old and new format
+        // Parse location data - handle both old and new format with fallbacks
         if (data.location) {
           // Old format - single location string
           const locationParts = data.location.split(', ');
           setLocationData({
-            location_country: data.location_country || 'Canada',
-            location_state: data.location_state || (locationParts[1] || ''),
-            location_city: data.location_city || (locationParts[0] || ''),
-            postal_code: data.postal_code || '',
-            street_address: data.street_address || ''
+            location_country: (data as any).location_country || 'Canada',
+            location_state: (data as any).location_state || (locationParts[1] || ''),
+            location_city: (data as any).location_city || (locationParts[0] || ''),
+            postal_code: (data as any).postal_code || '',
+            street_address: (data as any).street_address || ''
           });
         } else {
-          // New format - separate fields
+          // New format - separate fields with fallbacks
           setLocationData({
-            location_country: data.location_country || 'Canada',
-            location_state: data.location_state || '',
-            location_city: data.location_city || '',
-            postal_code: data.postal_code || '',
-            street_address: data.street_address || ''
+            location_country: (data as any).location_country || 'Canada',
+            location_state: (data as any).location_state || '',
+            location_city: (data as any).location_city || '',
+            postal_code: (data as any).postal_code || '',
+            street_address: (data as any).street_address || ''
           });
         }
       }
