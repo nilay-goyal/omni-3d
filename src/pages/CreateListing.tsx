@@ -42,7 +42,8 @@ const CreateListing = () => {
     location_city: '',
     location_state: '',
     location_country: 'Canada',
-    postal_code: ''
+    postal_code: '',
+    street_address: ''
   });
 
   useEffect(() => {
@@ -148,10 +149,10 @@ const CreateListing = () => {
         return;
       }
 
-      if (!formData.location_country || !formData.location_state || !formData.location_city || !formData.postal_code) {
+      if (!formData.location_country || !formData.location_state || !formData.location_city || !formData.postal_code || !formData.street_address) {
         toast({
           title: "Error",
-          description: "Please complete all location fields before publishing",
+          description: "Please complete all location fields including street address before publishing",
           variant: "destructive"
         });
         return;
@@ -176,6 +177,8 @@ const CreateListing = () => {
         location_city: formData.location_city || null,
         location_state: formData.location_state || null,
         location_country: formData.location_country,
+        street_address: formData.street_address || null,
+        postal_code: formData.postal_code || null,
         is_active: !isDraft // Set to false for drafts, true for published
       };
 
@@ -400,7 +403,8 @@ const CreateListing = () => {
                     location_country: formData.location_country,
                     location_state: formData.location_state,
                     location_city: formData.location_city,
-                    postal_code: formData.postal_code
+                    postal_code: formData.postal_code,
+                    street_address: formData.street_address
                   }}
                   onFieldChange={handleInputChange}
                 />
