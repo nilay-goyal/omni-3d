@@ -79,7 +79,7 @@ const PrinterMap = () => {
 
   // Initialize Google Maps
   useEffect(() => {
-    if (sellers.length > 0 && mapRef.current) {
+    if (mapRef.current) {
       initializeMap();
     }
   }, [sellers, userLocation]);
@@ -91,13 +91,12 @@ const PrinterMap = () => {
         .from('profiles')
         .select('*')
         .eq('user_type', 'seller')
-        .eq('availability_status', 'available')
         .not('location_city', 'is', null);
 
       if (error) throw error;
       
-      // Use sellers as-is, including their real coordinates if available
-      setSellers(data);
+      console.log('Fetched sellers:', data);
+      setSellers(data || []);
     } catch (error) {
       console.error('Error fetching sellers:', error);
       toast({
@@ -145,22 +144,23 @@ const PrinterMap = () => {
       markersRef.current.forEach(marker => marker.map = null);
       markersRef.current = [];
 
-      // Add markers for each seller
-      sellers.forEach((seller) => {
-        if (seller.latitude && seller.longitude) {
-          const marker = new google.maps.marker.AdvancedMarkerElement({
-            position: { lat: seller.latitude, lng: seller.longitude },
-            map: map,
-            title: seller.business_name || seller.full_name
-          });
+      // Add markers for each seller with coordinates
+      const sellersWithCoords = sellers.filter(seller => seller.latitude && seller.longitude);
+      console.log('Sellers with coordinates:', sellersWithCoords);
 
-          // Add click listener to marker
-          marker.addListener('click', () => {
-            setSelectedSeller(seller);
-          });
+      sellersWithCoords.forEach((seller) => {
+        const marker = new google.maps.marker.AdvancedMarkerElement({
+          position: { lat: Number(seller.latitude), lng: Number(seller.longitude) },
+          map: map,
+          title: seller.business_name || seller.full_name
+        });
 
-          markersRef.current.push(marker);
-        }
+        // Add click listener to marker
+        marker.addListener('click', () => {
+          setSelectedSeller(seller);
+        });
+
+        markersRef.current.push(marker);
       });
 
     } catch (error) {
@@ -209,6 +209,10 @@ const PrinterMap = () => {
               Back to Dashboard
             </Link>
             <h1 className="text-xl font-bold text-gray-900">Find Local Printers</h1>
+            <Button onClick={getUserLocation} variant="outline" size="sm">
+              <MapPin className="h-4 w-4 mr-2" />
+              Use My Location
+            </Button>
           </div>
         </div>
       </nav>
