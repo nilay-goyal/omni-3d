@@ -14,8 +14,10 @@ interface LocationFieldsProps {
     location_city: string;
     postal_code: string;
     street_address?: string;
+    latitude?: number;
+    longitude?: number;
   };
-  onFieldChange: (field: string, value: string) => void;
+  onFieldChange: (field: string, value: string | number) => void;
 }
 
 const countries = [
@@ -69,16 +71,13 @@ const LocationFields = ({ formData, onFieldChange }: LocationFieldsProps) => {
         try {
           const { latitude, longitude } = position.coords;
           
-          // Use reverse geocoding to get address from coordinates
-          const response = await fetch(
-            `https://api.opencagedata.com/geocode/v1/json?q=${latitude}+${longitude}&key=YOUR_API_KEY&limit=1`
-          );
+          // Save coordinates
+          onFieldChange('latitude', latitude);
+          onFieldChange('longitude', longitude);
           
-          // For now, we'll use a mock implementation since we don't have an API key
-          // In a real implementation, you would use a geocoding service
           toast({
-            title: "Location detected",
-            description: "Please enter your address manually for now. Automatic address detection will be available soon.",
+            title: "Location detected!",
+            description: "Your coordinates have been saved. Please fill in your address details.",
           });
           
           setIsGettingLocation(false);
@@ -86,7 +85,7 @@ const LocationFields = ({ formData, onFieldChange }: LocationFieldsProps) => {
           console.error('Error getting address:', error);
           toast({
             title: "Error",
-            description: "Could not get your address automatically. Please enter it manually.",
+            description: "Could not get your location. Please enter your address manually.",
             variant: "destructive",
           });
           setIsGettingLocation(false);
