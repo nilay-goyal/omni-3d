@@ -213,10 +213,12 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          latitude: number | null
           location: string | null
           location_city: string | null
           location_country: string | null
           location_state: string | null
+          longitude: number | null
           postal_code: string | null
           price_range: string | null
           printer_models: string | null
@@ -233,10 +235,12 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          latitude?: number | null
           location?: string | null
           location_city?: string | null
           location_country?: string | null
           location_state?: string | null
+          longitude?: number | null
           postal_code?: string | null
           price_range?: string | null
           printer_models?: string | null
@@ -253,10 +257,12 @@ export type Database = {
           email?: string
           full_name?: string
           id?: string
+          latitude?: number | null
           location?: string | null
           location_city?: string | null
           location_country?: string | null
           location_state?: string | null
+          longitude?: number | null
           postal_code?: string | null
           price_range?: string | null
           printer_models?: string | null

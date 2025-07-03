@@ -31,21 +31,58 @@ const PrinterMap = () => {
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [sellersLoading, setSellersLoading] = useState(true);
   const [selectedSeller, setSelectedSeller] = useState<Seller | null>(null);
+  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
+
+  // Get user's current location
+  useEffect(() => {
+    getUserLocation();
+  }, []);
 
   // Fetch sellers from database
   useEffect(() => {
     fetchSellers();
   }, []);
 
+  const getUserLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+          setLocationError(null);
+        },
+        (error) => {
+          console.error('Error getting location:', error);
+          setLocationError('Unable to get your location');
+          toast({
+            title: "Location Error",
+            description: "Unable to get your current location. Please ensure location permissions are enabled.",
+            variant: "destructive"
+          });
+        }
+      );
+    } else {
+      setLocationError('Geolocation not supported');
+      toast({
+        title: "Location Not Supported",
+        description: "Your browser does not support geolocation",
+        variant: "destructive"
+      });
+    }
+  };
+
   // Initialize Google Maps
   useEffect(() => {
     if (sellers.length > 0 && mapRef.current) {
       initializeMap();
     }
-  }, [sellers]);
+  }, [sellers, userLocation]);
 
   const fetchSellers = async () => {
     try {
@@ -59,20 +96,8 @@ const PrinterMap = () => {
 
       if (error) throw error;
       
-      // Filter sellers with complete location data
-      const sellersWithLocation = data.filter(seller => 
-        seller.location_city && seller.location_state
-      );
-      
-      // For demonstration, we'll use mock coordinates since we don't have geocoding yet
-      // In a real implementation, you'd geocode the addresses
-      const sellersWithCoords = sellersWithLocation.map((seller, index) => ({
-        ...seller,
-        latitude: 43.6532 + (Math.random() - 0.5) * 0.1, // Toronto area with some variation
-        longitude: -79.3832 + (Math.random() - 0.5) * 0.1
-      }));
-
-      setSellers(sellersWithCoords);
+      // Use sellers as-is, including their real coordinates if available
+      setSellers(data);
     } catch (error) {
       console.error('Error fetching sellers:', error);
       toast({
@@ -97,11 +122,16 @@ const PrinterMap = () => {
 
       await loader.load();
 
-      // Initialize map centered on Toronto (or first seller location)
-      const firstSeller = sellers[0];
-      const mapCenter = firstSeller 
-        ? { lat: firstSeller.latitude || 43.6532, lng: firstSeller.longitude || -79.3832 }
-        : { lat: 43.6532, lng: -79.3832 };
+      // Initialize map centered on user location, then first seller, then default
+      let mapCenter;
+      if (userLocation) {
+        mapCenter = userLocation;
+      } else {
+        const firstSeller = sellers.find(s => s.latitude && s.longitude);
+        mapCenter = firstSeller 
+          ? { lat: firstSeller.latitude!, lng: firstSeller.longitude! }
+          : { lat: 43.6532, lng: -79.3832 }; // Default to Toronto
+      }
 
       const map = new google.maps.Map(mapRef.current, {
         center: mapCenter,
