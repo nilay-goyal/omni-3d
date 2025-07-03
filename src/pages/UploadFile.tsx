@@ -1,7 +1,8 @@
 
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ExternalLink } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import STLUploadArea from '@/components/STLUploadArea';
 import STLViewer from '@/components/STLViewer';
@@ -58,7 +59,25 @@ const UploadFile = () => {
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
             STL File Viewer
           </h1>
-          <p className="text-xl text-gray-600">Upload and preview your 3D STL files</p>
+          <p className="text-xl text-gray-600 mb-6">Upload and preview your 3D STL files</p>
+          
+          <div className="mb-6">
+            <p className="text-lg text-gray-700 mb-4">Don't know what to print?</p>
+            <div className="flex justify-center gap-4">
+              <Button asChild variant="outline" size="lg">
+                <a href="https://www.thingiverse.com/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                  Thingiverse
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              </Button>
+              <Button asChild variant="outline" size="lg">
+                <a href="https://www.printables.com/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                  Printables
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              </Button>
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
