@@ -57,7 +57,7 @@ const ChatModal = ({ open, onOpenChange, sellerId, sellerName, listingId, listin
     if (!user) return;
 
     try {
-      // First, fetch messages
+      // Fetch messages first
       let query = supabase
         .from('messages')
         .select('*')
@@ -74,7 +74,7 @@ const ChatModal = ({ open, onOpenChange, sellerId, sellerName, listingId, listin
 
       if (messagesError) throw messagesError;
 
-      // Then, fetch sender profiles for all unique sender IDs
+      // Fetch sender information separately
       const senderIds = [...new Set(messagesData?.map(msg => msg.sender_id) || [])];
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
@@ -86,19 +86,19 @@ const ChatModal = ({ open, onOpenChange, sellerId, sellerName, listingId, listin
       // Combine messages with sender information
       const messagesWithSenders = messagesData?.map(message => ({
         ...message,
-        sender: profilesData?.find(profile => profile.id === message.sender_id) || null
+        sender: profilesData?.find(profile => profile.id === message.sender_id) || { full_name: 'Unknown User' }
       })) || [];
 
       setMessages(messagesWithSenders);
-      setHasInitialMessage((messagesWithSenders || []).length > 0);
+      setHasInitialMessage(messagesWithSenders.length > 0);
 
       // If no messages exist, send the initial "Hi, I am interested." message
-      if ((messagesWithSenders || []).length === 0) {
+      if (messagesWithSenders.length === 0) {
         await sendInitialMessage();
       }
 
       // Mark messages as read
-      if (messagesWithSenders && messagesWithSenders.length > 0) {
+      if (messagesWithSenders.length > 0) {
         const unreadMessages = messagesWithSenders.filter(msg => msg.receiver_id === user.id && !msg.is_read);
         if (unreadMessages.length > 0) {
           await supabase

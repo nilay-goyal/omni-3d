@@ -246,9 +246,21 @@ const Marketplace = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">3D Print Marketplace</h1>
-          <p className="mt-2 text-gray-600">Discover unique 3D printed items from local sellers</p>
-          <p className="mt-1 text-sm text-gray-500">Showing {filteredListings.length} of {listings.length} listings</p>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">3D Print Marketplace</h1>
+              <p className="mt-2 text-gray-600">Discover unique 3D printed items from local sellers</p>
+              <p className="mt-1 text-sm text-gray-500">Showing {filteredListings.length} of {listings.length} listings</p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Link to="/printer-map">
+                <Button variant="outline" className="flex items-center">
+                  <MapPin className="h-4 w-4 mr-2" />
+                  Find Local Printers
+                </Button>
+              </Link>
+            </div>
+          </div>
         </div>
 
         {/* Filters */}
