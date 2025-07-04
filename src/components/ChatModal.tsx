@@ -57,36 +57,39 @@ const ChatModal = ({ open, onOpenChange, sellerId, sellerName, listingId, listin
     if (!user) return;
 
     try {
-      // Fetch messages first
-      let query = supabase
+      // Use Promise.all to fetch messages and profiles in parallel
+      const messagesQuery = supabase
         .from('messages')
         .select('*')
         .or(`and(sender_id.eq.${user.id},receiver_id.eq.${sellerId}),and(sender_id.eq.${sellerId},receiver_id.eq.${user.id})`);
       
-      if (listingId) {
-        query = query.eq('listing_id', listingId);
-      } else {
-        query = query.is('listing_id', null);
-      }
-      
-      const { data: messagesData, error: messagesError } = await query
-        .order('created_at', { ascending: true });
+      // Apply listing_id filter based on whether it's null or has a value
+      const messagesWithListingFilter = listingId 
+        ? messagesQuery.eq('listing_id', listingId)
+        : messagesQuery.is('listing_id', null);
 
-      if (messagesError) throw messagesError;
+      const [messagesResponse, profilesResponse] = await Promise.all([
+        messagesWithListingFilter.order('created_at', { ascending: true }),
+        
+        // Fetch both user profiles at once
+        supabase
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', [user.id, sellerId])
+      ]);
 
-      // Fetch sender information separately
-      const senderIds = [...new Set(messagesData?.map(msg => msg.sender_id) || [])];
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, full_name')
-        .in('id', senderIds);
+      if (messagesResponse.error) throw messagesResponse.error;
+      if (profilesResponse.error) throw profilesResponse.error;
 
-      if (profilesError) throw profilesError;
+      // Create profile lookup map for faster access
+      const profileMap = new Map(
+        profilesResponse.data?.map(profile => [profile.id, profile]) || []
+      );
 
       // Combine messages with sender information
-      const messagesWithSenders = messagesData?.map(message => ({
+      const messagesWithSenders = messagesResponse.data?.map(message => ({
         ...message,
-        sender: profilesData?.find(profile => profile.id === message.sender_id) || { full_name: 'Unknown User' }
+        sender: profileMap.get(message.sender_id) || { full_name: 'Unknown User' }
       })) || [];
 
       setMessages(messagesWithSenders);
@@ -97,15 +100,21 @@ const ChatModal = ({ open, onOpenChange, sellerId, sellerName, listingId, listin
         await sendInitialMessage();
       }
 
-      // Mark messages as read
-      if (messagesWithSenders.length > 0) {
-        const unreadMessages = messagesWithSenders.filter(msg => msg.receiver_id === user.id && !msg.is_read);
-        if (unreadMessages.length > 0) {
-          await supabase
-            .from('messages')
-            .update({ is_read: true })
-            .in('id', unreadMessages.map(msg => msg.id));
-        }
+      // Mark messages as read (batch update)
+      const unreadMessages = messagesWithSenders.filter(msg => msg.receiver_id === user.id && !msg.is_read);
+      if (unreadMessages.length > 0) {
+        // Fire and forget - don't await, use async operation
+        const markAsRead = async () => {
+          try {
+            await supabase
+              .from('messages')
+              .update({ is_read: true })
+              .in('id', unreadMessages.map(msg => msg.id));
+          } catch (err) {
+            console.error('Error marking messages as read:', err);
+          }
+        };
+        markAsRead();
       }
     } catch (error) {
       console.error('Error fetching messages:', error);
