@@ -92,13 +92,13 @@ const PrinterMap = () => {
       setSellersLoading(true);
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, full_name, business_name, location_city, location_state, location_country, street_address, postal_code, price_range, specialties, availability_status, latitude, longitude')
         .eq('user_type', 'seller')
-        .not('location_city', 'is', null);
+        .not('location_city', 'is', null)
+        .limit(50); // Limit results for better performance
 
       if (error) throw error;
       
-      console.log('Fetched sellers:', data);
       setSellers(data || []);
     } catch (error) {
       console.error('Error fetching sellers:', error);
@@ -113,16 +113,18 @@ const PrinterMap = () => {
   };
 
   const initializeMap = async () => {
-    if (!mapRef.current) return;
+    if (!mapRef.current || sellers.length === 0) return;
 
     try {
-      const loader = new Loader({
-        apiKey: "AIzaSyBoksv5BGmomFNMP-vc1Y1AYCOxPvX_0WU",
-        version: "weekly",
-        libraries: ["maps", "marker"]
-      });
-
-      await loader.load();
+      // Only load Google Maps if not already loaded
+      if (!window.google) {
+        const loader = new Loader({
+          apiKey: "AIzaSyBoksv5BGmomFNMP-vc1Y1AYCOxPvX_0WU",
+          version: "weekly",
+          libraries: ["maps", "marker"]
+        });
+        await loader.load();
+      }
 
       // Initialize map centered on user location, then first seller, then default
       let mapCenter;
@@ -138,7 +140,13 @@ const PrinterMap = () => {
       const map = new google.maps.Map(mapRef.current, {
         center: mapCenter,
         zoom: 10,
-        mapId: "DEMO_MAP_ID"
+        mapId: "DEMO_MAP_ID",
+        gestureHandling: 'cooperative', // Better mobile performance
+        disableDefaultUI: false,
+        zoomControl: true,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false
       });
 
       mapInstanceRef.current = map;
@@ -147,24 +155,37 @@ const PrinterMap = () => {
       markersRef.current.forEach(marker => marker.map = null);
       markersRef.current = [];
 
-      // Add markers for each seller with coordinates
+      // Add markers for each seller with coordinates (batch process)
       const sellersWithCoords = sellers.filter(seller => seller.latitude && seller.longitude);
-      console.log('Sellers with coordinates:', sellersWithCoords);
+      
+      // Use requestAnimationFrame to avoid blocking the main thread
+      const addMarkersInBatches = (sellers: Seller[], batchSize = 10) => {
+        let index = 0;
+        const addBatch = () => {
+          const batch = sellers.slice(index, index + batchSize);
+          batch.forEach((seller) => {
+            const marker = new google.maps.marker.AdvancedMarkerElement({
+              position: { lat: Number(seller.latitude), lng: Number(seller.longitude) },
+              map: map,
+              title: seller.business_name || seller.full_name
+            });
 
-      sellersWithCoords.forEach((seller) => {
-        const marker = new google.maps.marker.AdvancedMarkerElement({
-          position: { lat: Number(seller.latitude), lng: Number(seller.longitude) },
-          map: map,
-          title: seller.business_name || seller.full_name
-        });
+            marker.addListener('click', () => {
+              setSelectedSeller(seller);
+            });
 
-        // Add click listener to marker
-        marker.addListener('click', () => {
-          setSelectedSeller(seller);
-        });
+            markersRef.current.push(marker);
+          });
 
-        markersRef.current.push(marker);
-      });
+          index += batchSize;
+          if (index < sellers.length) {
+            requestAnimationFrame(addBatch);
+          }
+        };
+        addBatch();
+      };
+
+      addMarkersInBatches(sellersWithCoords);
 
     } catch (error) {
       console.error('Error initializing map:', error);

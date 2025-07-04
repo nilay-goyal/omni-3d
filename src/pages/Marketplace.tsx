@@ -77,10 +77,9 @@ const Marketplace = () => {
 
   const fetchListings = async () => {
     try {
-      console.log('Starting to fetch listings...');
       setLoading(true);
       
-      // Simplified query to avoid timeout
+      // Fetch listings with limit for better performance
       const { data: listingsData, error: listingsError } = await supabase
         .from('marketplace_listings')
         .select(`
@@ -97,59 +96,71 @@ const Marketplace = () => {
           category_id
         `)
         .eq('is_active', true)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(50); // Limit for better performance
 
-      if (listingsError) {
-        console.error('Supabase error fetching listings:', listingsError);
-        throw listingsError;
+      if (listingsError) throw listingsError;
+
+      if (!listingsData || listingsData.length === 0) {
+        setListings([]);
+        return;
       }
 
-      console.log('Listings data fetched:', listingsData);
+      // Get unique IDs for batch fetching
+      const sellerIds = [...new Set(listingsData.map(l => l.seller_id))];
+      const categoryIds = [...new Set(listingsData.map(l => l.category_id).filter(Boolean))];
+      const listingIds = listingsData.map(l => l.id);
 
-      // Fetch additional data separately to avoid join complexity
-      const enrichedListings = await Promise.all(
-        (listingsData || []).map(async (listing) => {
-          try {
-            // Fetch seller info
-            const { data: sellerData } = await supabase
-              .from('profiles')
-              .select('full_name')
-              .eq('id', listing.seller_id)
-              .single();
-
-            // Fetch category info
-            const { data: categoryData } = await supabase
+      // Fetch all related data in parallel
+      const [sellersResponse, categoriesResponse, imagesResponse] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', sellerIds),
+        
+        categoryIds.length > 0 
+          ? supabase
               .from('marketplace_categories')
-              .select('name')
-              .eq('id', listing.category_id)
-              .single();
+              .select('id, name')
+              .in('id', categoryIds)
+          : Promise.resolve({ data: [] }),
+        
+        supabase
+          .from('marketplace_images')
+          .select('listing_id, image_url, is_primary')
+          .in('listing_id', listingIds)
+          .order('is_primary', { ascending: false })
+      ]);
 
-            // Fetch images
-            const { data: imagesData } = await supabase
-              .from('marketplace_images')
-              .select('image_url, is_primary')
-              .eq('listing_id', listing.id)
-              .order('is_primary', { ascending: false });
+      // Create lookup maps for O(1) access
+      const sellersMap = new Map<string, { id: string; full_name: string }>();
+      sellersResponse.data?.forEach(seller => {
+        sellersMap.set(seller.id, seller);
+      });
+      
+      const categoriesMap = new Map<string, { id: string; name: string }>();
+      categoriesResponse.data?.forEach(category => {
+        categoriesMap.set(category.id, category);
+      });
+      
+      const imagesMap = new Map<string, any[]>();
+      
+      // Group images by listing_id
+      imagesResponse.data?.forEach(image => {
+        if (!imagesMap.has(image.listing_id)) {
+          imagesMap.set(image.listing_id, []);
+        }
+        imagesMap.get(image.listing_id)!.push(image);
+      });
 
-            return {
-              ...listing,
-              seller: sellerData,
-              category: categoryData,
-              images: imagesData || []
-            };
-          } catch (error) {
-            console.error('Error enriching listing:', listing.id, error);
-            return {
-              ...listing,
-              seller: null,
-              category: null,
-              images: []
-            };
-          }
-        })
-      );
+      // Combine all data efficiently
+      const enrichedListings: Listing[] = listingsData.map(listing => ({
+        ...listing,
+        seller: sellersMap.get(listing.seller_id) || null,
+        category: categoriesMap.get(listing.category_id) || null,
+        images: imagesMap.get(listing.id) || []
+      }));
 
-      console.log(`Found ${enrichedListings.length} listings`);
       setListings(enrichedListings);
     } catch (error) {
       console.error('Error fetching listings:', error);
