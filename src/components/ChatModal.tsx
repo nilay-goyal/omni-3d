@@ -26,7 +26,7 @@ interface ChatModalProps {
   onOpenChange: (open: boolean) => void;
   sellerId: string;
   sellerName: string;
-  listingId: string;
+  listingId: string | null;
   listingTitle: string;
 }
 
@@ -58,11 +58,18 @@ const ChatModal = ({ open, onOpenChange, sellerId, sellerName, listingId, listin
 
     try {
       // First, fetch messages
-      const { data: messagesData, error: messagesError } = await supabase
+      let query = supabase
         .from('messages')
         .select('*')
-        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${sellerId}),and(sender_id.eq.${sellerId},receiver_id.eq.${user.id})`)
-        .eq('listing_id', listingId)
+        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${sellerId}),and(sender_id.eq.${sellerId},receiver_id.eq.${user.id})`);
+      
+      if (listingId) {
+        query = query.eq('listing_id', listingId);
+      } else {
+        query = query.is('listing_id', null);
+      }
+      
+      const { data: messagesData, error: messagesError } = await query
         .order('created_at', { ascending: true });
 
       if (messagesError) throw messagesError;

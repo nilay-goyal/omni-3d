@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Loader } from "@googlemaps/js-api-loader";
+import ChatModal from "@/components/ChatModal";
 
 interface Seller {
   id: string;
@@ -33,6 +34,8 @@ const PrinterMap = () => {
   const [selectedSeller, setSelectedSeller] = useState<Seller | null>(null);
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatSeller, setChatSeller] = useState<Seller | null>(null);
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
@@ -187,6 +190,11 @@ const PrinterMap = () => {
     return specialties;
   };
 
+  const handleOpenChat = (seller: Seller) => {
+    setChatSeller(seller);
+    setChatOpen(true);
+  };
+
   if (loading || sellersLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -274,11 +282,24 @@ const PrinterMap = () => {
                         </span>
                         
                         <div className="flex space-x-2">
-                          <Button variant="outline" size="sm">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenChat(seller);
+                            }}
+                          >
                             <MessageCircle className="h-4 w-4 mr-1" />
                             Message
                           </Button>
-                          <Button size="sm">
+                          <Button 
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenChat(seller);
+                            }}
+                          >
                             Request Quote
                           </Button>
                         </div>
@@ -300,6 +321,18 @@ const PrinterMap = () => {
           </div>
         </div>
       </div>
+      
+      {/* Chat Modal */}
+      {chatSeller && (
+        <ChatModal
+          open={chatOpen}
+          onOpenChange={setChatOpen}
+          sellerId={chatSeller.id}
+          sellerName={formatSellerName(chatSeller)}
+          listingId={null}
+          listingTitle="General Inquiry"
+        />
+      )}
     </div>
   );
 };
