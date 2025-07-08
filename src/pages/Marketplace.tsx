@@ -161,7 +161,7 @@ const Marketplace = () => {
 
   const getPrimaryImage = useCallback((images: any[]) => {
     const primaryImage = images?.find(img => img.is_primary);
-    return primaryImage?.image_url || images?.[0]?.image_url || '/placeholder.svg';
+    return primaryImage?.image_url || images?.[0]?.image_url || 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iNDAwIiB2aWV3Qm94PSIwIDAgNDAwIDQwMCI+CiAgPHJlY3Qgd2lkdGg9IjQwMCIgaGVpZ2h0PSI0MDAiIGZpbGw9IiNmM2Y0ZjYiLz4KICA8ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxNTAsIDE1MCkiPgogICAgPHBhdGggZD0iTTUwIDIwIEw4MCAzNSBMODAgNjUgTDUwIDgwIEwyMCA2NSBMMjAgMzUgWiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjOWNhM2FmIiBzdHJva2Utd2lkdGg9IjIiLz4KICAgIDxwYXRoIGQ9Ik01MCAyMCBMNTAgNTAgTTIwIDM1IEw1MCA1MCBNODA0MzUgTDUwIDUwIiBzdHJva2U9IiM5Y2EzYWYiIHN0cm9rZS13aWR0aD0iMiIvPgogICAgPGNpcmNsZSBjeD0iNTAiIGN5PSI5MCIgcj0iMyIgZmlsbD0iIzljYTNhZiIvPgogIDwvZz4KICA8dGV4dCB4PSIyMDAiIHk9IjI1MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzZiNzI4MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0Ij5ObyBJbWFnZTwvdGV4dD4KPC9zdmc+';
   }, []);
 
   const formatPrice = useCallback((price: number) => {
