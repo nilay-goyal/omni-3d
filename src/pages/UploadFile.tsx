@@ -1,16 +1,23 @@
 
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ExternalLink } from 'lucide-react';
+import { ArrowLeft, ExternalLink, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSTLFile } from '@/contexts/STLFileContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/components/ui/use-toast';
 import STLUploadArea from '@/components/STLUploadArea';
 import STLViewer from '@/components/STLViewer';
 
 const UploadFile = () => {
   const navigate = useNavigate();
   const { user, profile, loading } = useAuth();
+  const { setSTLFile } = useSTLFile();
+  const { toast } = useToast();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadedFilePath, setUploadedFilePath] = useState<string | null>(null);
 
   useEffect(() => {
     if (loading) return;
@@ -26,8 +33,53 @@ const UploadFile = () => {
     }
   }, [user, profile, loading, navigate]);
 
-  const handleFileSelect = (file: File) => {
+  const handleFileSelect = async (file: File) => {
     setSelectedFile(file);
+    await uploadToStorage(file);
+  };
+
+  const uploadToStorage = async (file: File) => {
+    if (!user) return;
+
+    setUploading(true);
+    try {
+      const timestamp = Date.now();
+      const fileName = `${user.id}/${timestamp}_${file.name}`;
+      
+      const { data, error } = await supabase.storage
+        .from('stl-files')
+        .upload(fileName, file);
+
+      if (error) throw error;
+
+      const filePath = data.path;
+      setUploadedFilePath(filePath);
+      
+      // Store in context for use across the app
+      setSTLFile({
+        file,
+        uploadedPath: filePath,
+        fileName: file.name
+      });
+
+      toast({
+        title: "Success",
+        description: "STL file uploaded successfully!",
+      });
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      toast({
+        title: "Upload Error",
+        description: "Failed to upload STL file. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleFindPrinters = () => {
+    navigate('/printer-map');
   };
 
   if (loading) {
@@ -83,6 +135,24 @@ const UploadFile = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div>
             <STLUploadArea onFileSelect={handleFileSelect} />
+            {uploading && (
+              <div className="mt-4 text-center">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="mt-2 text-sm text-gray-600">Uploading file...</p>
+              </div>
+            )}
+            {uploadedFilePath && !uploading && (
+              <div className="mt-6 text-center">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                  <p className="text-green-800 font-medium">✓ File uploaded successfully!</p>
+                  <p className="text-green-600 text-sm mt-1">Ready to request quotes from local printers</p>
+                </div>
+                <Button onClick={handleFindPrinters} size="lg" className="w-full">
+                  <MapPin className="h-5 w-5 mr-2" />
+                  Find Local Printers
+                </Button>
+              </div>
+            )}
           </div>
           <div>
             <STLViewer file={selectedFile} />
