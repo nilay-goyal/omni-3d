@@ -3,10 +3,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, MessageCircle } from "lucide-react";
+import { Send, MessageCircle, Paperclip } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSTLFile } from "@/contexts/STLFileContext";
 
 interface Message {
   id: string;
@@ -37,6 +38,7 @@ const ChatModal = ({ open, onOpenChange, sellerId, sellerName, listingId, listin
   const [hasInitialMessage, setHasInitialMessage] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+  const { stlFile } = useSTLFile();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -130,13 +132,20 @@ const ChatModal = ({ open, onOpenChange, sellerId, sellerName, listingId, listin
     if (!user || hasInitialMessage) return;
 
     try {
+      let content = "Hi, I am interested.";
+      
+      // If user has an STL file uploaded, include it in the initial message
+      if (stlFile) {
+        content = `Hi, I am interested in getting a quote for my 3D print. I have uploaded an STL file: ${stlFile.fileName}. Please let me know your pricing and timeline.`;
+      }
+
       const { error } = await supabase
         .from('messages')
         .insert({
           sender_id: user.id,
           receiver_id: sellerId,
           listing_id: listingId,
-          content: "Hi, I am interested."
+          content: content
         });
 
       if (error) throw error;
@@ -145,6 +154,48 @@ const ChatModal = ({ open, onOpenChange, sellerId, sellerName, listingId, listin
       setTimeout(fetchMessages, 500);
     } catch (error) {
       console.error('Error sending initial message:', error);
+    }
+  };
+
+  const sendSTLFile = async () => {
+    if (!stlFile || !user) return;
+
+    try {
+      setLoading(true);
+      
+      // Get a signed URL for the uploaded file
+      const { data: urlData } = await supabase.storage
+        .from('stl-files')
+        .createSignedUrl(stlFile.uploadedPath!, 3600); // 1 hour expiry
+
+      const fileMessage = `📁 STL File Shared: ${stlFile.fileName}\n\nDownload link: ${urlData?.signedUrl || 'File sharing not available'}\n\nThis link will expire in 1 hour. Please download the file to review for your quote.`;
+
+      const { error } = await supabase
+        .from('messages')
+        .insert({
+          sender_id: user.id,
+          receiver_id: sellerId,
+          listing_id: listingId,
+          content: fileMessage
+        });
+
+      if (error) throw error;
+
+      fetchMessages();
+      
+      toast({
+        title: "STL file shared",
+        description: "Your STL file has been shared with the seller.",
+      });
+    } catch (error) {
+      console.error('Error sharing STL file:', error);
+      toast({
+        title: "Error",
+        description: "Failed to share STL file. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -264,6 +315,25 @@ const ChatModal = ({ open, onOpenChange, sellerId, sellerName, listingId, listin
         </ScrollArea>
 
         <div className="p-4 border-t">
+          {stlFile && (
+            <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-blue-900">STL File Ready</p>
+                  <p className="text-xs text-blue-700">{stlFile.fileName}</p>
+                </div>
+                <Button
+                  onClick={sendSTLFile}
+                  disabled={loading}
+                  size="sm"
+                  variant="outline"
+                >
+                  <Paperclip className="h-4 w-4 mr-1" />
+                  Share File
+                </Button>
+              </div>
+            </div>
+          )}
           <div className="flex space-x-2">
             <Input
               placeholder="Type your message..."
