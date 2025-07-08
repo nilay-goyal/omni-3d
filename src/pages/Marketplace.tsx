@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -43,44 +43,44 @@ const Marketplace = () => {
   const [listings, setListings] = useState<Listing[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchInput, setSearchInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedCondition, setSelectedCondition] = useState<string>("all");
   const [priceRange, setPriceRange] = useState<{ min: string; max: string }>({ min: "", max: "" });
   const [selectedListingId, setSelectedListingId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => setSearchTerm(searchInput), 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   useEffect(() => {
-    console.log('Marketplace component mounted, fetching data...');
-    fetchListings();
-    fetchCategories();
+    Promise.all([fetchListings(), fetchCategories()]);
   }, []);
 
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
-      console.log('Fetching categories...');
       const { data, error } = await supabase
         .from('marketplace_categories')
         .select('id, name')
         .order('name');
 
-      if (error) {
-        console.error('Error fetching categories:', error);
-        throw error;
-      }
-      console.log('Categories fetched:', data);
-      setCategories((data || []).filter(cat => cat.id && cat.id.trim() !== ''));
+      if (error) throw error;
+      setCategories(data || []);
     } catch (error) {
       console.error('Error fetching categories:', error);
     }
-  };
+  }, []);
 
-  const fetchListings = async () => {
+  const fetchListings = useCallback(async () => {
     try {
       setLoading(true);
       
-      // Fetch listings with limit for better performance
-      const { data: listingsData, error: listingsError } = await supabase
+      // Single optimized query to get all data at once
+      const { data: listingsData, error } = await supabase
         .from('marketplace_listings')
         .select(`
           id,
@@ -91,74 +91,32 @@ const Marketplace = () => {
           location_state,
           views_count,
           created_at,
-          is_active,
           seller_id,
-          category_id
+          category_id,
+          profiles!seller_id(full_name),
+          marketplace_categories(name),
+          marketplace_images(image_url, is_primary)
         `)
         .eq('is_active', true)
         .order('created_at', { ascending: false })
-        .limit(50); // Limit for better performance
+        .limit(50);
 
-      if (listingsError) throw listingsError;
+      if (error) throw error;
 
-      if (!listingsData || listingsData.length === 0) {
-        setListings([]);
-        return;
-      }
-
-      // Get unique IDs for batch fetching
-      const sellerIds = [...new Set(listingsData.map(l => l.seller_id))];
-      const categoryIds = [...new Set(listingsData.map(l => l.category_id).filter(Boolean))];
-      const listingIds = listingsData.map(l => l.id);
-
-      // Fetch all related data in parallel
-      const [sellersResponse, categoriesResponse, imagesResponse] = await Promise.all([
-        supabase
-          .from('profiles')
-          .select('id, full_name')
-          .in('id', sellerIds),
-        
-        categoryIds.length > 0 
-          ? supabase
-              .from('marketplace_categories')
-              .select('id, name')
-              .in('id', categoryIds)
-          : Promise.resolve({ data: [] }),
-        
-        supabase
-          .from('marketplace_images')
-          .select('listing_id, image_url, is_primary')
-          .in('listing_id', listingIds)
-          .order('is_primary', { ascending: false })
-      ]);
-
-      // Create lookup maps for O(1) access
-      const sellersMap = new Map<string, { id: string; full_name: string }>();
-      sellersResponse.data?.forEach(seller => {
-        sellersMap.set(seller.id, seller);
-      });
-      
-      const categoriesMap = new Map<string, { id: string; name: string }>();
-      categoriesResponse.data?.forEach(category => {
-        categoriesMap.set(category.id, category);
-      });
-      
-      const imagesMap = new Map<string, any[]>();
-      
-      // Group images by listing_id
-      imagesResponse.data?.forEach(image => {
-        if (!imagesMap.has(image.listing_id)) {
-          imagesMap.set(image.listing_id, []);
-        }
-        imagesMap.get(image.listing_id)!.push(image);
-      });
-
-      // Combine all data efficiently
-      const enrichedListings: Listing[] = listingsData.map(listing => ({
-        ...listing,
-        seller: sellersMap.get(listing.seller_id) || null,
-        category: categoriesMap.get(listing.category_id) || null,
-        images: imagesMap.get(listing.id) || []
+      // Transform data structure for better performance
+      const enrichedListings: Listing[] = (listingsData || []).map(listing => ({
+        id: listing.id,
+        title: listing.title,
+        price: listing.price,
+        condition: listing.condition,
+        location_city: listing.location_city,
+        location_state: listing.location_state,
+        views_count: listing.views_count,
+        created_at: listing.created_at,
+        is_active: true,
+        seller: Array.isArray(listing.profiles) ? listing.profiles[0] : listing.profiles,
+        category: Array.isArray(listing.marketplace_categories) ? listing.marketplace_categories[0] : listing.marketplace_categories,
+        images: listing.marketplace_images || []
       }));
 
       setListings(enrichedListings);
@@ -168,55 +126,57 @@ const Marketplace = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const filteredListings = listings.filter(listing => {
-    const matchesSearch = !searchTerm || listing.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === "all" || listing.category?.name === selectedCategory;
-    const matchesCondition = selectedCondition === "all" || listing.condition === selectedCondition;
-    const matchesPrice = (!priceRange.min || listing.price >= parseFloat(priceRange.min)) &&
-                        (!priceRange.max || listing.price <= parseFloat(priceRange.max));
-    
-    return matchesSearch && matchesCategory && matchesCondition && matchesPrice;
-  });
+  const filteredListings = useMemo(() => {
+    return listings.filter(listing => {
+      const matchesSearch = !searchTerm || listing.title.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = selectedCategory === "all" || listing.category?.name === selectedCategory;
+      const matchesCondition = selectedCondition === "all" || listing.condition === selectedCondition;
+      const matchesPrice = (!priceRange.min || listing.price >= parseFloat(priceRange.min)) &&
+                          (!priceRange.max || listing.price <= parseFloat(priceRange.max));
+      
+      return matchesSearch && matchesCategory && matchesCondition && matchesPrice;
+    });
+  }, [listings, searchTerm, selectedCategory, selectedCondition, priceRange]);
 
-  console.log('Filtered listings count:', filteredListings.length);
-  console.log('Applied filters:', { searchTerm, selectedCategory, selectedCondition, priceRange });
-
-  const getPrimaryImage = (images: any[]) => {
+  const getPrimaryImage = useCallback((images: any[]) => {
     const primaryImage = images?.find(img => img.is_primary);
     return primaryImage?.image_url || images?.[0]?.image_url || '/placeholder.svg';
-  };
+  }, []);
 
-  const formatPrice = (price: number) => {
+  const formatPrice = useCallback((price: number) => {
     return new Intl.NumberFormat('en-CA', {
       style: 'currency',
       currency: 'CAD'
     }).format(price);
-  };
+  }, []);
 
-  const handleListingClick = async (listingId: string) => {
+  const handleListingClick = useCallback(async (listingId: string) => {
+    setSelectedListingId(listingId);
+    setModalOpen(true);
+
+    // Update view count in background without blocking UI
     const listing = listings.find(l => l.id === listingId);
-    if (!listing) return;
-
-    // Increment view count
-    try {
-      await supabase
-        .from('marketplace_listings')
-        .update({ views_count: listing.views_count + 1 })
-        .eq('id', listingId);
-      
-      // Update local state
+    if (listing) {
+      // Update local state immediately for better UX
       setListings(prev => prev.map(l => 
         l.id === listingId ? { ...l, views_count: l.views_count + 1 } : l
       ));
-    } catch (error) {
-      console.error('Error updating view count:', error);
+      
+      // Update database in background
+      (async () => {
+        try {
+          await supabase
+            .from('marketplace_listings')
+            .update({ views_count: listing.views_count + 1 })
+            .eq('id', listingId);
+        } catch (error) {
+          console.error('Error updating view count:', error);
+        }
+      })();
     }
-
-    setSelectedListingId(listingId);
-    setModalOpen(true);
-  };
+  }, [listings]);
 
   if (loading) {
     return (
@@ -283,8 +243,8 @@ const Marketplace = () => {
                 <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
                   placeholder="Search items..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
                   className="pl-10"
                 />
               </div>
@@ -338,6 +298,7 @@ const Marketplace = () => {
               <Button
                 variant="outline"
                 onClick={() => {
+                  setSearchInput("");
                   setSearchTerm("");
                   setSelectedCategory("all");
                   setSelectedCondition("all");
@@ -400,6 +361,7 @@ const Marketplace = () => {
                       src={getPrimaryImage(listing.images)}
                       alt={listing.title}
                       className="w-full h-full object-cover"
+                      loading="lazy"
                     />
                     <div className="absolute top-2 right-2">
                       <Badge variant="secondary">{listing.condition}</Badge>
