@@ -22,6 +22,19 @@ interface Message {
   } | null;
 }
 
+interface SaleConfirmation {
+  id: string;
+  listing_id: string | null;
+  buyer_id: string;
+  seller_id: string;
+  seller_confirmed: boolean;
+  buyer_confirmed: boolean;
+  sale_completed: boolean;
+  seller_confirmed_at: string | null;
+  buyer_confirmed_at: string | null;
+  sale_completed_at: string | null;
+}
+
 interface ChatModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -36,8 +49,9 @@ const ChatModal = ({ open, onOpenChange, sellerId, sellerName, listingId, listin
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [hasInitialMessage, setHasInitialMessage] = useState(false);
+  const [saleConfirmation, setSaleConfirmation] = useState<SaleConfirmation | null>(null);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { stlFile } = useSTLFile();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -48,6 +62,7 @@ const ChatModal = ({ open, onOpenChange, sellerId, sellerName, listingId, listin
   useEffect(() => {
     if (open && user && sellerId) {
       fetchMessages();
+      fetchSaleConfirmation();
     }
   }, [open, user, sellerId, listingId]);
 
@@ -128,6 +143,125 @@ const ChatModal = ({ open, onOpenChange, sellerId, sellerName, listingId, listin
     }
   };
 
+  const fetchSaleConfirmation = async () => {
+    if (!user || !listingId) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('sale_confirmations')
+        .select('*')
+        .eq('listing_id', listingId)
+        .or(`and(buyer_id.eq.${user.id},seller_id.eq.${sellerId}),and(buyer_id.eq.${sellerId},seller_id.eq.${user.id})`)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows found
+      setSaleConfirmation(data);
+    } catch (error) {
+      console.error('Error fetching sale confirmation:', error);
+    }
+  };
+
+  const createOrUpdateSaleConfirmation = async (action: 'seller_confirm' | 'buyer_confirm') => {
+    if (!user || !listingId) return;
+
+    try {
+      setLoading(true);
+      const isSeller = profile?.user_type === 'seller';
+      const buyerId = isSeller ? sellerId : user.id;
+      const actualSellerId = isSeller ? user.id : sellerId;
+
+      if (!saleConfirmation) {
+        // Create new sale confirmation
+        const { data, error } = await supabase
+          .from('sale_confirmations')
+          .insert({
+            listing_id: listingId,
+            buyer_id: buyerId,
+            seller_id: actualSellerId,
+            seller_confirmed: action === 'seller_confirm',
+            buyer_confirmed: action === 'buyer_confirm',
+            seller_confirmed_at: action === 'seller_confirm' ? new Date().toISOString() : null,
+            buyer_confirmed_at: action === 'buyer_confirm' ? new Date().toISOString() : null
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        setSaleConfirmation(data);
+      } else {
+        // Update existing sale confirmation
+        const updates: any = {};
+        if (action === 'seller_confirm') {
+          updates.seller_confirmed = true;
+          updates.seller_confirmed_at = new Date().toISOString();
+        } else {
+          updates.buyer_confirmed = true;
+          updates.buyer_confirmed_at = new Date().toISOString();
+        }
+
+        // Check if both parties have confirmed
+        const bothConfirmed = (action === 'seller_confirm' && saleConfirmation.buyer_confirmed) || 
+                             (action === 'buyer_confirm' && saleConfirmation.seller_confirmed);
+        
+        if (bothConfirmed) {
+          updates.sale_completed = true;
+          updates.sale_completed_at = new Date().toISOString();
+        }
+
+        const { data, error } = await supabase
+          .from('sale_confirmations')
+          .update(updates)
+          .eq('id', saleConfirmation.id)
+          .select()
+          .single();
+
+        if (error) throw error;
+        setSaleConfirmation(data);
+
+        // Send completion message if sale is completed
+        if (bothConfirmed) {
+          await sendCompletionMessage();
+        }
+      }
+
+      const actionText = action === 'seller_confirm' ? 'confirmed to print' : 'confirmed purchase';
+      toast({
+        title: "Confirmation sent",
+        description: `You have ${actionText} this item.`,
+      });
+
+      fetchSaleConfirmation();
+    } catch (error) {
+      console.error('Error updating sale confirmation:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update confirmation. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const sendCompletionMessage = async () => {
+    try {
+      const completionMessage = "🎉 Sale Confirmed! Both parties have agreed to proceed with this transaction. The seller will begin printing and you can coordinate delivery details.";
+      
+      await supabase
+        .from('messages')
+        .insert({
+          sender_id: user!.id,
+          receiver_id: sellerId,
+          listing_id: listingId,
+          content: completionMessage
+        });
+
+      fetchMessages();
+    } catch (error) {
+      console.error('Error sending completion message:', error);
+    }
+  };
+
   const sendInitialMessage = async () => {
     if (!user || hasInitialMessage) return;
 
@@ -150,6 +284,26 @@ const ChatModal = ({ open, onOpenChange, sellerId, sellerName, listingId, listin
 
       if (error) throw error;
       setHasInitialMessage(true);
+      
+      // Create sale confirmation record if this is a buyer and one doesn't exist
+      if (profile?.user_type === 'buyer' && listingId && !saleConfirmation) {
+        try {
+          await supabase
+            .from('sale_confirmations')
+            .insert({
+              listing_id: listingId,
+              buyer_id: user.id,
+              seller_id: sellerId,
+              seller_confirmed: false,
+              buyer_confirmed: false,
+              sale_completed: false
+            });
+          fetchSaleConfirmation();
+        } catch (confirmationError) {
+          console.error('Error creating sale confirmation:', confirmationError);
+        }
+      }
+      
       // Refresh messages to show the new one
       setTimeout(fetchMessages, 500);
     } catch (error) {
@@ -315,6 +469,50 @@ const ChatModal = ({ open, onOpenChange, sellerId, sellerName, listingId, listin
         </ScrollArea>
 
         <div className="p-4 border-t">
+          {/* Sale Confirmation Section */}
+          {listingId && saleConfirmation && !saleConfirmation.sale_completed && (
+            <div className="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-green-900">Sale Confirmation</p>
+                
+                {profile?.user_type === 'seller' && !saleConfirmation.seller_confirmed && (
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-green-700">Ready to print this item?</p>
+                    <Button
+                      onClick={() => createOrUpdateSaleConfirmation('seller_confirm')}
+                      disabled={loading}
+                      size="sm"
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      Confirm to Print
+                    </Button>
+                  </div>
+                )}
+                
+                {profile?.user_type === 'buyer' && saleConfirmation.seller_confirmed && !saleConfirmation.buyer_confirmed && (
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-green-700">Seller is ready to print. Confirm purchase?</p>
+                    <Button
+                      onClick={() => createOrUpdateSaleConfirmation('buyer_confirm')}
+                      disabled={loading}
+                      size="sm"
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      Confirm Purchase
+                    </Button>
+                  </div>
+                )}
+                
+                {saleConfirmation.seller_confirmed && saleConfirmation.buyer_confirmed && (
+                  <div className="text-center">
+                    <p className="text-sm font-medium text-green-800">🎉 Sale Confirmed!</p>
+                    <p className="text-xs text-green-600">Both parties have agreed to proceed</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {stlFile && (
             <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <div className="flex items-center justify-between">

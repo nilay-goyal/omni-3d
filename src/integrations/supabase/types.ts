@@ -279,6 +279,59 @@ export type Database = {
         }
         Relationships: []
       }
+      sale_confirmations: {
+        Row: {
+          buyer_confirmed: boolean
+          buyer_confirmed_at: string | null
+          buyer_id: string
+          created_at: string
+          id: string
+          listing_id: string | null
+          sale_completed: boolean
+          sale_completed_at: string | null
+          seller_confirmed: boolean
+          seller_confirmed_at: string | null
+          seller_id: string
+          updated_at: string
+        }
+        Insert: {
+          buyer_confirmed?: boolean
+          buyer_confirmed_at?: string | null
+          buyer_id: string
+          created_at?: string
+          id?: string
+          listing_id?: string | null
+          sale_completed?: boolean
+          sale_completed_at?: string | null
+          seller_confirmed?: boolean
+          seller_confirmed_at?: string | null
+          seller_id: string
+          updated_at?: string
+        }
+        Update: {
+          buyer_confirmed?: boolean
+          buyer_confirmed_at?: string | null
+          buyer_id?: string
+          created_at?: string
+          id?: string
+          listing_id?: string | null
+          sale_completed?: boolean
+          sale_completed_at?: string | null
+          seller_confirmed?: boolean
+          seller_confirmed_at?: string | null
+          seller_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_confirmations_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       uploaded_files: {
         Row: {
           created_at: string
