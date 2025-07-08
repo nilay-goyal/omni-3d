@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -30,18 +29,7 @@ export const useSellerListings = () => {
   const [listings, setListings] = useState<SellerListing[]>([]);
   const [listingsLoading, setListingsLoading] = useState(true);
 
-  useEffect(() => {
-    if (!loading && (!user || profile?.user_type !== 'seller')) {
-      navigate('/seller-signin');
-      return;
-    }
-    
-    if (user && profile?.user_type === 'seller') {
-      fetchSellerListings();
-    }
-  }, [user, profile, loading, navigate]);
-
-  const fetchSellerListings = async () => {
+  const fetchSellerListings = useCallback(async () => {
     try {
       setListingsLoading(true);
       const { data, error } = await supabase
@@ -58,13 +46,20 @@ export const useSellerListings = () => {
           featured,
           views_count,
           created_at,
-          images:marketplace_images(image_url, is_primary)
+          marketplace_images(image_url, is_primary)
         `)
         .eq('seller_id', user?.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setListings(data || []);
+      
+      // Transform the data to match our interface
+      const transformedData = (data || []).map(item => ({
+        ...item,
+        images: item.marketplace_images || []
+      }));
+      
+      setListings(transformedData);
     } catch (error) {
       console.error('Error fetching seller listings:', error);
       toast({
@@ -75,19 +70,30 @@ export const useSellerListings = () => {
     } finally {
       setListingsLoading(false);
     }
-  };
+  }, [user?.id, toast]);
 
-  const deleteListing = async (listingId: string) => {
+  useEffect(() => {
+    if (!loading && (!user || profile?.user_type !== 'seller')) {
+      navigate('/seller-signin');
+      return;
+    }
+    
+    if (user && profile?.user_type === 'seller') {
+      fetchSellerListings();
+    }
+  }, [user, profile, loading, navigate, fetchSellerListings]);
+
+  const deleteListing = useCallback(async (listingId: string) => {
     try {
       const { error } = await supabase
         .from('marketplace_listings')
         .delete()
         .eq('id', listingId)
-        .eq('seller_id', user?.id); // Extra security check
+        .eq('seller_id', user?.id);
 
       if (error) throw error;
 
-      setListings(listings.filter(listing => listing.id !== listingId));
+      setListings(prev => prev.filter(listing => listing.id !== listingId));
       toast({
         title: "Success",
         description: "Listing deleted successfully"
@@ -100,19 +106,19 @@ export const useSellerListings = () => {
         variant: "destructive"
       });
     }
-  };
+  }, [user?.id, toast]);
 
-  const toggleListingStatus = async (listingId: string, currentStatus: boolean) => {
+  const toggleListingStatus = useCallback(async (listingId: string, currentStatus: boolean) => {
     try {
       const { error } = await supabase
         .from('marketplace_listings')
         .update({ is_active: !currentStatus })
         .eq('id', listingId)
-        .eq('seller_id', user?.id); // Extra security check
+        .eq('seller_id', user?.id);
 
       if (error) throw error;
 
-      setListings(listings.map(listing => 
+      setListings(prev => prev.map(listing => 
         listing.id === listingId 
           ? { ...listing, is_active: !currentStatus }
           : listing
@@ -130,7 +136,7 @@ export const useSellerListings = () => {
         variant: "destructive"
       });
     }
-  };
+  }, [user?.id, toast]);
 
   return {
     listings,
