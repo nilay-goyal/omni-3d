@@ -79,31 +79,50 @@ const Marketplace = () => {
     try {
       setLoading(true);
       
-      // Single optimized query to get all data at once
+      // Get basic listings first (much faster)
       const { data: listingsData, error } = await supabase
         .from('marketplace_listings')
-        .select(`
-          id,
-          title,
-          price,
-          condition,
-          location_city,
-          location_state,
-          views_count,
-          created_at,
-          seller_id,
-          category_id,
-          profiles!seller_id(full_name),
-          marketplace_categories(name),
-          marketplace_images(image_url, is_primary)
-        `)
+        .select('*')
         .eq('is_active', true)
         .order('created_at', { ascending: false })
         .limit(50);
 
       if (error) throw error;
 
-      // Transform data structure for better performance
+      // Get additional data in parallel
+      const [profilesData, categoriesData, imagesData] = await Promise.all([
+        // Get profiles for sellers
+        supabase
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', listingsData?.map(l => l.seller_id) || []),
+        
+        // Get categories
+        supabase
+          .from('marketplace_categories')
+          .select('id, name')
+          .in('id', listingsData?.map(l => l.category_id).filter(Boolean) || []),
+        
+        // Get images
+        supabase
+          .from('marketplace_images')
+          .select('listing_id, image_url, is_primary')
+          .in('listing_id', listingsData?.map(l => l.id) || [])
+      ]);
+
+      // Create lookup maps for performance
+      const profilesMap = new Map(profilesData.data?.map(p => [p.id, p]) || []);
+      const categoriesMap = new Map(categoriesData.data?.map(c => [c.id, c]) || []);
+      const imagesMap = new Map<string, any[]>();
+      
+      imagesData.data?.forEach(img => {
+        if (!imagesMap.has(img.listing_id)) {
+          imagesMap.set(img.listing_id, []);
+        }
+        imagesMap.get(img.listing_id)!.push(img);
+      });
+
+      // Combine data efficiently
       const enrichedListings: Listing[] = (listingsData || []).map(listing => ({
         id: listing.id,
         title: listing.title,
@@ -113,10 +132,10 @@ const Marketplace = () => {
         location_state: listing.location_state,
         views_count: listing.views_count,
         created_at: listing.created_at,
-        is_active: true,
-        seller: Array.isArray(listing.profiles) ? listing.profiles[0] : listing.profiles,
-        category: Array.isArray(listing.marketplace_categories) ? listing.marketplace_categories[0] : listing.marketplace_categories,
-        images: listing.marketplace_images || []
+        is_active: listing.is_active,
+        seller: profilesMap.get(listing.seller_id) || null,
+        category: listing.category_id ? categoriesMap.get(listing.category_id) || null : null,
+        images: imagesMap.get(listing.id) || []
       }));
 
       setListings(enrichedListings);
