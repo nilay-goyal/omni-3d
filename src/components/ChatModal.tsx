@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSTLFile } from "@/contexts/STLFileContext";
+import mixpanel from "mixpanel-browser";
 
 interface Message {
   id: string;
@@ -255,6 +256,22 @@ const ChatModal = ({ open, onOpenChange, sellerId, sellerName, listingId, listin
           listing_id: listingId,
           content: completionMessage
         });
+
+      // Track sale confirmation in Mixpanel
+      mixpanel.track('Sale Confirmed', {
+        listing_id: listingId,
+        seller_id: sellerId,
+        buyer_id: user!.id,
+        listing_title: listingTitle,
+        timestamp: new Date().toISOString()
+      });
+
+      // Show pop-up confirmation
+      toast({
+        title: "🎉 Sale Confirmed!",
+        description: "Both parties have confirmed the sale. The transaction will proceed!",
+        duration: 5000,
+      });
 
       fetchMessages();
     } catch (error) {
