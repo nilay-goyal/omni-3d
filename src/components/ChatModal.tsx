@@ -189,6 +189,24 @@ const ChatModal = ({ open, onOpenChange, sellerId, sellerName, listingId, listin
 
         if (error) throw error;
         setSaleConfirmation(data);
+        
+        // Check if this was the second confirmation (completing the sale)
+        if (action === 'buyer_confirm' && data.seller_confirmed || action === 'seller_confirm' && data.buyer_confirmed) {
+          // Update to mark sale as completed
+          const { data: updatedData, error: updateError } = await supabase
+            .from('sale_confirmations')
+            .update({
+              sale_completed: true,
+              sale_completed_at: new Date().toISOString()
+            })
+            .eq('id', data.id)
+            .select()
+            .single();
+            
+          if (updateError) throw updateError;
+          setSaleConfirmation(updatedData);
+          await sendCompletionMessage();
+        }
       } else {
         // Update existing sale confirmation
         const updates: any = {};
@@ -486,67 +504,64 @@ const ChatModal = ({ open, onOpenChange, sellerId, sellerName, listingId, listin
         </ScrollArea>
 
         <div className="p-4 border-t">
-          {/* Sale Confirmation Section */}
+          {/* Sale Confirmation Section - Always show for listings */}
           {listingId && (
             <div className="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-green-900">Sale Confirmation</p>
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-green-900">💼 Sale Confirmation</p>
                 
-                {/* Show status if sale confirmation exists */}
-                {saleConfirmation && (
-                  <div className="text-xs text-green-700 mb-2">
-                    {saleConfirmation.seller_confirmed && saleConfirmation.buyer_confirmed ? (
-                      <p className="font-medium">🎉 Both parties confirmed - Sale completed!</p>
+                {/* Show current status */}
+                <div className="text-xs text-green-700">
+                  {saleConfirmation ? (
+                    saleConfirmation.seller_confirmed && saleConfirmation.buyer_confirmed ? (
+                      <p className="font-medium text-green-800">🎉 Both parties confirmed - Sale completed!</p>
                     ) : (
                       <p>
                         Seller: {saleConfirmation.seller_confirmed ? '✅ Confirmed' : '⏳ Pending'} | 
                         Buyer: {saleConfirmation.buyer_confirmed ? '✅ Confirmed' : '⏳ Pending'}
                       </p>
-                    )}
-                  </div>
-                )}
+                    )
+                  ) : (
+                    <p>Ready to confirm this transaction</p>
+                  )}
+                </div>
                 
-                {/* Seller confirmation button */}
-                {profile?.user_type === 'seller' && (!saleConfirmation?.seller_confirmed) && (
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs text-green-700">Ready to print this item?</p>
-                    <Button
-                      onClick={() => createOrUpdateSaleConfirmation('seller_confirm')}
-                      disabled={loading}
-                      size="sm"
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      Confirm to Print
-                    </Button>
-                  </div>
-                )}
-                
-                {/* Buyer confirmation button */}
-                {profile?.user_type === 'buyer' && (!saleConfirmation?.buyer_confirmed) && (
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs text-green-700">
-                      {saleConfirmation?.seller_confirmed 
-                        ? "Seller is ready to print. Confirm purchase?" 
-                        : "Confirm your purchase intent"}
-                    </p>
-                    <Button
-                      onClick={() => createOrUpdateSaleConfirmation('buyer_confirm')}
-                      disabled={loading}
-                      size="sm"
-                      className="bg-blue-600 hover:bg-blue-700"
-                    >
-                      Confirm Purchase
-                    </Button>
-                  </div>
-                )}
-                
-                {/* Show completion message */}
-                {saleConfirmation?.sale_completed && (
-                  <div className="text-center">
-                    <p className="text-sm font-medium text-green-800">🎉 Sale Confirmed!</p>
-                    <p className="text-xs text-green-600">Both parties have agreed to proceed</p>
-                  </div>
-                )}
+                {/* Always show buttons unless already confirmed */}
+                <div className="space-y-2">
+                  {/* Seller confirmation button */}
+                  {profile?.user_type === 'seller' && !saleConfirmation?.seller_confirmed && (
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-green-700">Ready to print this item?</p>
+                      <Button
+                        onClick={() => createOrUpdateSaleConfirmation('seller_confirm')}
+                        disabled={loading}
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        ✅ Confirm to Print
+                      </Button>
+                    </div>
+                  )}
+                  
+                  {/* Buyer confirmation button */}
+                  {profile?.user_type === 'buyer' && !saleConfirmation?.buyer_confirmed && (
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-green-700">
+                        {saleConfirmation?.seller_confirmed 
+                          ? "Seller is ready! Confirm your purchase?" 
+                          : "Ready to purchase this item?"}
+                      </p>
+                      <Button
+                        onClick={() => createOrUpdateSaleConfirmation('buyer_confirm')}
+                        disabled={loading}
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        ✅ Confirm Purchase
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
