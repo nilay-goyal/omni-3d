@@ -4,7 +4,7 @@ import './index.css'
 import mixpanel from 'mixpanel-browser'
 
 // Initialize Mixpanel
-mixpanel.init("YOUR_TOKEN", {
+mixpanel.init("f82219815700c2d312d0d19df40964c9", {
   debug: true,
   track_pageview: true,
   persistence: "localStorage",
