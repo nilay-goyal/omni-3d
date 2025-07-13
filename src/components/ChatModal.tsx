@@ -487,13 +487,28 @@ const ChatModal = ({ open, onOpenChange, sellerId, sellerName, listingId, listin
 
         <div className="p-4 border-t">
           {/* Sale Confirmation Section */}
-          {listingId && saleConfirmation && !saleConfirmation.sale_completed && (
+          {listingId && (
             <div className="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg">
               <div className="space-y-2">
                 <p className="text-sm font-medium text-green-900">Sale Confirmation</p>
                 
-                {profile?.user_type === 'seller' && !saleConfirmation.seller_confirmed && (
-                  <div className="flex items-center justify-between">
+                {/* Show status if sale confirmation exists */}
+                {saleConfirmation && (
+                  <div className="text-xs text-green-700 mb-2">
+                    {saleConfirmation.seller_confirmed && saleConfirmation.buyer_confirmed ? (
+                      <p className="font-medium">🎉 Both parties confirmed - Sale completed!</p>
+                    ) : (
+                      <p>
+                        Seller: {saleConfirmation.seller_confirmed ? '✅ Confirmed' : '⏳ Pending'} | 
+                        Buyer: {saleConfirmation.buyer_confirmed ? '✅ Confirmed' : '⏳ Pending'}
+                      </p>
+                    )}
+                  </div>
+                )}
+                
+                {/* Seller confirmation button */}
+                {profile?.user_type === 'seller' && (!saleConfirmation?.seller_confirmed) && (
+                  <div className="flex items-center justify-between mb-2">
                     <p className="text-xs text-green-700">Ready to print this item?</p>
                     <Button
                       onClick={() => createOrUpdateSaleConfirmation('seller_confirm')}
@@ -506,9 +521,14 @@ const ChatModal = ({ open, onOpenChange, sellerId, sellerName, listingId, listin
                   </div>
                 )}
                 
-                {profile?.user_type === 'buyer' && saleConfirmation.seller_confirmed && !saleConfirmation.buyer_confirmed && (
+                {/* Buyer confirmation button */}
+                {profile?.user_type === 'buyer' && (!saleConfirmation?.buyer_confirmed) && (
                   <div className="flex items-center justify-between">
-                    <p className="text-xs text-green-700">Seller is ready to print. Confirm purchase?</p>
+                    <p className="text-xs text-green-700">
+                      {saleConfirmation?.seller_confirmed 
+                        ? "Seller is ready to print. Confirm purchase?" 
+                        : "Confirm your purchase intent"}
+                    </p>
                     <Button
                       onClick={() => createOrUpdateSaleConfirmation('buyer_confirm')}
                       disabled={loading}
@@ -520,7 +540,8 @@ const ChatModal = ({ open, onOpenChange, sellerId, sellerName, listingId, listin
                   </div>
                 )}
                 
-                {saleConfirmation.seller_confirmed && saleConfirmation.buyer_confirmed && (
+                {/* Show completion message */}
+                {saleConfirmation?.sale_completed && (
                   <div className="text-center">
                     <p className="text-sm font-medium text-green-800">🎉 Sale Confirmed!</p>
                     <p className="text-xs text-green-600">Both parties have agreed to proceed</p>
