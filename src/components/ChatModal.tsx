@@ -461,38 +461,35 @@ const ChatModal = ({ open, onOpenChange, sellerId, sellerName, listingId, listin
               <DialogTitle className="text-lg">{sellerName}</DialogTitle>
               <p className="text-sm text-gray-600 truncate">{listingTitle}</p>
             </div>
-            {/* Confirm Sale Button - Only show for listings and if user hasn't confirmed yet */}
-            {listingId && (
-              <div className="flex items-center space-x-2">
-                {profile?.user_type === 'seller' && !saleConfirmation?.seller_confirmed && (
-                  <Button
-                    onClick={() => createOrUpdateSaleConfirmation('seller_confirm')}
-                    disabled={loading}
-                    size="sm"
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    ✅ Confirm Sale
-                  </Button>
-                )}
-                {profile?.user_type === 'buyer' && !saleConfirmation?.buyer_confirmed && (
-                  <Button
-                    onClick={() => createOrUpdateSaleConfirmation('buyer_confirm')}
-                    disabled={loading}
-                    size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    ✅ Confirm Sale
-                  </Button>
-                )}
-                {/* Show status when user has already confirmed */}
-                {((profile?.user_type === 'seller' && saleConfirmation?.seller_confirmed) ||
-                  (profile?.user_type === 'buyer' && saleConfirmation?.buyer_confirmed)) && (
-                  <span className="text-sm text-green-600 font-medium">
-                    ✅ Confirmed
-                  </span>
-                )}
-              </div>
-            )}
+            {/* Confirm Sale Button - Always show */}
+            <div className="flex items-center space-x-2">
+              {profile?.user_type === 'seller' && (
+                <Button
+                  onClick={() => createOrUpdateSaleConfirmation('seller_confirm')}
+                  disabled={loading || saleConfirmation?.seller_confirmed}
+                  size="sm"
+                  className={saleConfirmation?.seller_confirmed 
+                    ? "bg-green-500 text-white cursor-default" 
+                    : "bg-green-600 hover:bg-green-700 text-white"
+                  }
+                >
+                  {saleConfirmation?.seller_confirmed ? "✅ Confirmed" : "✅ Confirm Sale"}
+                </Button>
+              )}
+              {profile?.user_type === 'buyer' && (
+                <Button
+                  onClick={() => createOrUpdateSaleConfirmation('buyer_confirm')}
+                  disabled={loading || saleConfirmation?.buyer_confirmed}
+                  size="sm"
+                  className={saleConfirmation?.buyer_confirmed 
+                    ? "bg-blue-500 text-white cursor-default" 
+                    : "bg-blue-600 hover:bg-blue-700 text-white"
+                  }
+                >
+                  {saleConfirmation?.buyer_confirmed ? "✅ Confirmed" : "✅ Confirm Sale"}
+                </Button>
+              )}
+            </div>
           </div>
         </DialogHeader>
 
