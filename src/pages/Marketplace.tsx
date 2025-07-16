@@ -215,7 +215,7 @@ const Marketplace = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Link to="/" className="flex items-center">
-              <Printer className="h-8 w-8 text-green-600 mr-2" />
+              <img src="/lovable-uploads/accc9980-e782-4a86-8830-76bd3bacadf8.png" alt="Omni3D Logo" className="h-8 w-8 mr-2" />
               <h1 className="text-xl font-bold text-gray-900">Omni3D</h1>
             </Link>
             <div className="flex space-x-4">

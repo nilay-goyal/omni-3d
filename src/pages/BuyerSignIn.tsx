@@ -111,7 +111,7 @@ const BuyerSignIn = () => {
             </Button>
           </Link>
           <div className="flex items-center">
-            <Printer className="h-6 w-6 text-blue-600 mr-2" />
+            <img src="/lovable-uploads/accc9980-e782-4a86-8830-76bd3bacadf8.png" alt="Omni3D Logo" className="h-6 w-6 mr-2" />
             <span className="text-lg font-semibold">Omni3D</span>
           </div>
         </div>

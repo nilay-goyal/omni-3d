@@ -11,8 +11,8 @@ const Index = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Link to="/" className="flex items-center">
-              <Printer className="h-8 w-8 text-blue-600 mr-2" />
-              <h1 className="text-xl font-bold text-gray-900">Omni3D</h1>
+            <img src="/lovable-uploads/accc9980-e782-4a86-8830-76bd3bacadf8.png" alt="Omni3D Logo" className="h-8 w-8 mr-2" />
+            <h1 className="text-xl font-bold text-gray-900">Omni3D</h1>
             </Link>
             <div className="flex flex-wrap gap-2 sm:gap-4">
               <Link to="/buyer-signin">
@@ -154,7 +154,7 @@ const Index = () => {
       <footer className="bg-gray-900 text-white py-8 sm:py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="flex items-center justify-center mb-4">
-            <Printer className="h-6 w-6 mr-2" />
+            <img src="/lovable-uploads/accc9980-e782-4a86-8830-76bd3bacadf8.png" alt="Omni3D Logo" className="h-6 w-6 mr-2" />
             <span className="text-lg font-semibold">Omni3D</span>
           </div>
           <p className="text-gray-400 text-sm sm:text-base">
