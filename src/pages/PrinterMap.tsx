@@ -179,51 +179,47 @@ const PrinterMap = () => {
         markersRef.current.push(userMarker);
       }
 
-      // Add markers for each seller with coordinates (batch process)
-      const sellersWithCoords = sellers.filter(seller => seller.latitude && seller.longitude);
-      
-      // Use requestAnimationFrame to avoid blocking the main thread
-      const addMarkersInBatches = (sellers: Seller[], batchSize = 10) => {
-        let index = 0;
-        const addBatch = () => {
-          const batch = sellers.slice(index, index + batchSize);
-          batch.forEach((seller) => {
-            const marker = new google.maps.marker.AdvancedMarkerElement({
-              position: { lat: Number(seller.latitude), lng: Number(seller.longitude) },
-              map: map,
-              title: seller.business_name || seller.full_name
-            });
+      // Add markers for each seller using approximate city coordinates
+      const sellersToMap = sellers.filter(seller => seller.location_city);
 
-            // Create a custom element for seller marker with red color
-            const sellerMarkerElement = document.createElement('div');
-            sellerMarkerElement.innerHTML = `
-              <div style="
-                width: 16px;
-                height: 16px;
-                background-color: #dc2626;
-                border: 2px solid white;
-                border-radius: 50%;
-                box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-              "></div>
-            `;
-            marker.content = sellerMarkerElement;
-
-            marker.addListener('click', () => {
-              setSelectedSeller(seller);
-            });
-
-            markersRef.current.push(marker);
-          });
-
-          index += batchSize;
-          if (index < sellers.length) {
-            requestAnimationFrame(addBatch);
-          }
-        };
-        addBatch();
+      // For now, add markers at approximate locations based on city names
+      // This is a simplified approach - in production you'd geocode the addresses
+      const cityCoordinates: { [key: string]: { lat: number, lng: number } } = {
+        'Toronto': { lat: 43.6532, lng: -79.3832 },
+        'Brampton': { lat: 43.7315, lng: -79.7624 },
+        'Waterloo': { lat: 43.4643, lng: -80.5204 }
       };
 
-      addMarkersInBatches(sellersWithCoords);
+      sellersToMap.forEach((seller) => {
+        const coords = cityCoordinates[seller.location_city || ''];
+        if (coords) {
+          const marker = new google.maps.marker.AdvancedMarkerElement({
+            position: coords,
+            map: map,
+            title: seller.business_name || seller.full_name
+          });
+
+          // Create a custom element for seller marker with red color
+          const sellerMarkerElement = document.createElement('div');
+          sellerMarkerElement.innerHTML = `
+            <div style="
+              width: 16px;
+              height: 16px;
+              background-color: #dc2626;
+              border: 2px solid white;
+              border-radius: 50%;
+              box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            "></div>
+          `;
+          marker.content = sellerMarkerElement;
+
+          marker.addListener('click', () => {
+            setSelectedSeller(seller);
+          });
+
+          markersRef.current.push(marker);
+        }
+      });
 
     } catch (error) {
       console.error('Error initializing map:', error);
