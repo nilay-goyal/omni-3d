@@ -69,61 +69,69 @@ const Index = () => {
             How It Works
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
-            <Card className="text-center">
-              <CardHeader>
-                <div className="mx-auto w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Users className="h-6 w-6 text-blue-600" />
-                </div>
-                <CardTitle>Simple Sign In</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription>
-                  Quick and easy sign-in process for both buyers and sellers.
-                </CardDescription>
-              </CardContent>
-            </Card>
+            <Link to="/buyer-signin">
+              <Card className="text-center cursor-pointer hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <div className="mx-auto w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <Users className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <CardTitle>Simple Sign In</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription>
+                    Quick and easy sign-in process for both buyers and sellers.
+                  </CardDescription>
+                </CardContent>
+              </Card>
+            </Link>
 
-            <Card className="text-center">
-              <CardHeader>
-                <div className="mx-auto w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                  <Printer className="h-6 w-6 text-green-600" />
-                </div>
-                <CardTitle>Upload Your Design</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription>
-                  Upload your STL files and describe what you need printed.
-                </CardDescription>
-              </CardContent>
-            </Card>
+            <Link to="/upload-file">
+              <Card className="text-center cursor-pointer hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <div className="mx-auto w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                    <Printer className="h-6 w-6 text-green-600" />
+                  </div>
+                  <CardTitle>Upload Your Design</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription>
+                    Upload your STL files and describe what you need printed.
+                  </CardDescription>
+                </CardContent>
+              </Card>
+            </Link>
 
-            <Card className="text-center">
-              <CardHeader>
-                <div className="mx-auto w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <MapPin className="h-6 w-6 text-purple-600" />
-                </div>
-                <CardTitle>Find Local Printers</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription>
-                  View nearby 3D printer owners on an interactive map.
-                </CardDescription>
-              </CardContent>
-            </Card>
+            <Link to="/printer-map">
+              <Card className="text-center cursor-pointer hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <div className="mx-auto w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <MapPin className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <CardTitle>Find Local Printers</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription>
+                    View nearby 3D printer owners on an interactive map.
+                  </CardDescription>
+                </CardContent>
+              </Card>
+            </Link>
 
-            <Card className="text-center">
-              <CardHeader>
-                <div className="mx-auto w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                  <MessageCircle className="h-6 w-6 text-orange-600" />
-                </div>
-                <CardTitle>Connect & Print</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription>
-                  Message sellers directly to discuss your printing needs.
-                </CardDescription>
-              </CardContent>
-            </Card>
+            <Link to="/marketplace">
+              <Card className="text-center cursor-pointer hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <div className="mx-auto w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                    <MessageCircle className="h-6 w-6 text-orange-600" />
+                  </div>
+                  <CardTitle>Connect & Print</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription>
+                    Message sellers directly to discuss your printing needs.
+                  </CardDescription>
+                </CardContent>
+              </Card>
+            </Link>
           </div>
         </div>
 
