@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -155,6 +154,31 @@ const PrinterMap = () => {
       markersRef.current.forEach(marker => marker.map = null);
       markersRef.current = [];
 
+      // Add user location marker if available
+      if (userLocation) {
+        const userMarker = new google.maps.marker.AdvancedMarkerElement({
+          position: userLocation,
+          map: map,
+          title: "Your Location",
+        });
+
+        // Create a custom element for user marker with blue color
+        const userMarkerElement = document.createElement('div');
+        userMarkerElement.innerHTML = `
+          <div style="
+            width: 20px;
+            height: 20px;
+            background-color: #2563eb;
+            border: 3px solid white;
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+          "></div>
+        `;
+        userMarker.content = userMarkerElement;
+
+        markersRef.current.push(userMarker);
+      }
+
       // Add markers for each seller with coordinates (batch process)
       const sellersWithCoords = sellers.filter(seller => seller.latitude && seller.longitude);
       
@@ -169,6 +193,20 @@ const PrinterMap = () => {
               map: map,
               title: seller.business_name || seller.full_name
             });
+
+            // Create a custom element for seller marker with red color
+            const sellerMarkerElement = document.createElement('div');
+            sellerMarkerElement.innerHTML = `
+              <div style="
+                width: 16px;
+                height: 16px;
+                background-color: #dc2626;
+                border: 2px solid white;
+                border-radius: 50%;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+              "></div>
+            `;
+            marker.content = sellerMarkerElement;
 
             marker.addListener('click', () => {
               setSelectedSeller(seller);
