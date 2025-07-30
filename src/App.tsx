@@ -22,6 +22,7 @@ import Marketplace from "./pages/Marketplace";
 import SellerListings from "./pages/SellerListings";
 import CreateListing from "./pages/CreateListing";
 import EditListing from "./pages/EditListing";
+import AITextToCAD from "./pages/AITextToCAD";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +49,7 @@ const App = () => (
               <Route path="/messages" element={<Messages />} />
               <Route path="/seller-messages" element={<SellerMessages />} />
               <Route path="/marketplace" element={<Marketplace />} />
+              <Route path="/ai-text-to-cad" element={<AITextToCAD />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

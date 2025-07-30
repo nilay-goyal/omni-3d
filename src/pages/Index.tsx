@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Printer, Users, MapPin, MessageCircle, ShoppingBag } from "lucide-react";
+import { Printer, Users, MapPin, MessageCircle, ShoppingBag, Bot } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const Index = () => {
@@ -47,6 +47,12 @@ const Index = () => {
             <Link to="/buyer-signin">
               <Button size="lg" className="w-full sm:w-auto px-6 sm:px-8 py-3">
                 Find Printer
+              </Button>
+            </Link>
+            <Link to="/ai-text-to-cad">
+              <Button size="lg" variant="outline" className="w-full sm:w-auto px-6 sm:px-8 py-3">
+                <Bot className="h-4 w-4 mr-2" />
+                AI Text to CAD
               </Button>
             </Link>
             <Link to="/marketplace">
