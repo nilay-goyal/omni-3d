@@ -409,6 +409,11 @@ const Marketplace = () => {
                       alt={listing.title}
                       className="w-full h-full object-cover"
                       loading="lazy"
+                      decoding="async"
+                      onError={e => {
+                        e.currentTarget.src = '/placeholder.svg';
+                      }}
+                      style={{ background: '#f3f4f6', minHeight: '100px' }}
                     />
                     <div className="absolute top-2 right-2">
                       <Badge variant="secondary">{listing.condition}</Badge>

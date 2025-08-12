@@ -79,6 +79,12 @@ const SellerListingCard = ({ listing, onDelete, onToggleStatus }: SellerListingC
                 src={listing.images[0].image_url}
                 alt={listing.title}
                 className="w-full h-full object-cover"
+                loading="lazy"
+                decoding="async"
+                onError={e => {
+                  e.currentTarget.src = '/placeholder.svg';
+                }}
+                style={{ background: '#f3f4f6', minHeight: '100px' }}
               />
             </div>
           ) : (
@@ -91,6 +97,12 @@ const SellerListingCard = ({ listing, onDelete, onToggleStatus }: SellerListingC
                         src={image.image_url}
                         alt={`${listing.title} ${index + 1}`}
                         className="w-full h-full object-cover"
+                        loading="lazy"
+                        decoding="async"
+                        onError={e => {
+                          e.currentTarget.src = '/placeholder.svg';
+                        }}
+                        style={{ background: '#f3f4f6', minHeight: '100px' }}
                       />
                     </CarouselItem>
                   ))}
