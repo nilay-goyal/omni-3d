@@ -1,3 +1,5 @@
+import React from "react";
+
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { error: any }> {
   constructor(props: any) {
     super(props);
@@ -17,7 +19,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { err
   }
 }
 
-import React from "react";
+// import React moved to top
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
