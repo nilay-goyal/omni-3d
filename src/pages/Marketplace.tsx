@@ -1,4 +1,5 @@
 import { timer } from '../lib/perfMetrics';
+import mixpanel from 'mixpanel-browser';
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
@@ -51,7 +52,7 @@ const Marketplace = () => {
   const [priceRange, setPriceRange] = useState<{ min: string; max: string }>({ min: "", max: "" });
   const [selectedListingId, setSelectedListingId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [page, setPage] = useState(0);
+  const [cursor, setCursor] = useState<{ updated_at: string; id: string } | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const PAGE_SIZE = 20;
   
@@ -63,7 +64,7 @@ const Marketplace = () => {
 
   useEffect(() => {
     fetchCategories();
-    fetchListings(0, true);
+    fetchListings(null, true);
     // eslint-disable-next-line
   }, [searchTerm, selectedCategory, selectedCondition, priceRange]);
 
@@ -81,23 +82,22 @@ const Marketplace = () => {
     }
   }, []);
 
-  const fetchListings = useCallback(async (pageNum = 0, reset = false) => {
-  // Removed timer logic causing runtime error
+  const fetchListings = useCallback(async (cursorParam: { updated_at: string; id: string } | null = null, reset = false) => {
     try {
       setLoading(true);
       let query = supabase
         .from('marketplace_listings')
         .select('*')
         .eq('is_active', true)
-        .order('created_at', { ascending: false })
-        .range(pageNum * PAGE_SIZE, pageNum * PAGE_SIZE + PAGE_SIZE - 1);
+        .order('updated_at', { ascending: false })
+        .order('id', { ascending: false })
+        .limit(PAGE_SIZE);
 
       // Add filters to query
       if (searchTerm) {
         query = query.ilike('title', `%${searchTerm}%`);
       }
       if (selectedCategory !== 'all') {
-        // Need to get category id from name
         const cat = categories.find(c => c.name === selectedCategory);
         if (cat) query = query.eq('category_id', cat.id);
       }
@@ -110,9 +110,13 @@ const Marketplace = () => {
       if (priceRange.max) {
         query = query.lte('price', parseFloat(priceRange.max));
       }
+      if (cursorParam) {
+        // Tuple comparison for cursor pagination
+        query = query.filter('updated_at', 'lt', cursorParam.updated_at)
+                     .filter('id', 'lt', cursorParam.id);
+      }
 
       const { data: listingsData, error } = await query;
-  // Removed timer end call
       if (error) throw error;
 
       // Get additional data in parallel
@@ -161,7 +165,11 @@ const Marketplace = () => {
         setListings(prev => [...prev, ...enrichedListings]);
       }
       setHasMore(enrichedListings.length === PAGE_SIZE);
-      setPage(pageNum);
+      // Set next cursor from last row
+      if (enrichedListings.length > 0) {
+        const last = enrichedListings[enrichedListings.length - 1];
+        setCursor({ updated_at: last.created_at, id: last.id });
+      }
     } catch (error) {
       console.error('Error fetching listings:', error);
       if (reset) setListings([]);
@@ -225,9 +233,9 @@ const Marketplace = () => {
     const viewportHeight = window.innerHeight;
     const fullHeight = document.body.offsetHeight;
     if (scrollY + viewportHeight + 200 > fullHeight) {
-      fetchListings(page + 1);
+      fetchListings(cursor);
     }
-  }, [hasMore, loading, page, fetchListings]);
+  }, [hasMore, loading, cursor, fetchListings]);
 
   useEffect(() => {
     window.addEventListener('scroll', handleScroll);
@@ -397,7 +405,7 @@ const Marketplace = () => {
             </p>
             {listings.length === 0 && (
               <div className="mt-4">
-                <Button onClick={() => fetchListings(0, true)} variant="outline">
+                <Button onClick={() => fetchListings(null, true)} variant="outline">
                   Refresh Listings
                 </Button>
               </div>
