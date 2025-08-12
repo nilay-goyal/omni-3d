@@ -421,17 +421,47 @@ const Marketplace = () => {
               >
                 <CardContent className="p-0">
                   <div className="aspect-square relative overflow-hidden rounded-t-lg">
-                    <img
-                      src={getPrimaryImage(listing.images) || '/placeholder.svg'}
-                      alt={listing.title}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                      decoding="async"
-                      onError={e => {
-                        e.currentTarget.src = '/placeholder.svg';
-                      }}
-                      style={{ background: '#f3f4f6', minHeight: '100px' }}
-                    />
+                    {(() => {
+                      const baseUrl = getPrimaryImage(listing.images) || '/placeholder.svg';
+                      if (baseUrl === '/placeholder.svg') {
+                        return (
+                          <img
+                            src={baseUrl}
+                            alt={listing.title}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                            decoding="async"
+                            style={{ background: '#f3f4f6', minHeight: '100px' }}
+                          />
+                        );
+                      }
+                      // Supabase Transformations: ?width=320&format=avif etc.
+                      const avif320 = `${baseUrl}?width=320&format=avif`;
+                      const avif640 = `${baseUrl}?width=640&format=avif`;
+                      const avif960 = `${baseUrl}?width=960&format=avif`;
+                      const webp320 = `${baseUrl}?width=320&format=webp`;
+                      const webp640 = `${baseUrl}?width=640&format=webp`;
+                      const webp960 = `${baseUrl}?width=960&format=webp`;
+                      const jpeg640 = `${baseUrl}?width=640&format=jpeg`;
+                      return (
+                        <picture>
+                          <source type="image/avif" srcSet={`${avif320} 320w, ${avif640} 640w, ${avif960} 960w`} sizes="(max-width: 640px) 90vw, (max-width: 1024px) 45vw, 320px" />
+                          <source type="image/webp" srcSet={`${webp320} 320w, ${webp640} 640w, ${webp960} 960w`} sizes="(max-width: 640px) 90vw, (max-width: 1024px) 45vw, 320px" />
+                          <img
+                            src={jpeg640}
+                            alt={listing.title}
+                            loading="lazy"
+                            decoding="async"
+                            width={320}
+                            height={240}
+                            style={{ objectFit: 'cover', background: '#f3f4f6', minHeight: '100px' }}
+                            onError={e => {
+                              e.currentTarget.src = '/placeholder.svg';
+                            }}
+                          />
+                        </picture>
+                      );
+                    })()}
                     <div className="absolute top-2 right-2">
                       <Badge variant="secondary">{listing.condition}</Badge>
                     </div>
