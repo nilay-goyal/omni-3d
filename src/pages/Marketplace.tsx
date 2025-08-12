@@ -404,7 +404,7 @@ const Marketplace = () => {
                 <CardContent className="p-0">
                   <div className="aspect-square relative overflow-hidden rounded-t-lg">
                     <img
-                      src={getPrimaryImage(listing.images)}
+                      src={getPrimaryImage(listing.images) || '/placeholder.svg'}
                       alt={listing.title}
                       className="w-full h-full object-cover"
                       loading="lazy"
