@@ -1,3 +1,4 @@
+import { timer } from '../lib/perfMetrics';
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
@@ -81,9 +82,8 @@ const Marketplace = () => {
   }, []);
 
   const fetchListings = useCallback(async (pageNum = 0, reset = false) => {
-    // Perf timer for TTFR
-    const { timer } = await import('../lib/perfMetrics');
-    const t = timer('fetchListings');
+  // Perf timer for TTFR
+  const t = timer('fetchListings');
     try {
       setLoading(true);
       let query = supabase
