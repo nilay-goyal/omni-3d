@@ -1,4 +1,3 @@
-import { useNearFoldPrefetch } from '../hooks/useNearFoldPrefetch';
 import { timer } from '../lib/perfMetrics';
 import mixpanel from 'mixpanel-browser';
 
@@ -413,72 +412,67 @@ const Marketplace = () => {
             )}
           </div>
         ) : (
-          (() => {
-            // Prefetch next page images when near fold
-            const gridRef = useNearFoldPrefetch({
-              getNextImageUrls: () => listings.slice(filteredListings.length, filteredListings.length + 12).map(l => getPrimaryImage(l.images)),
-              enabled: hasMore
-            });
-            return (
-              <div ref={gridRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredListings.map((listing) => (
-                  <Card 
-                    key={listing.id} 
-                    className="hover:shadow-lg transition-shadow cursor-pointer"
-                    onClick={() => handleListingClick(listing.id)}
-                  >
-                    <CardContent className="p-0">
-                      <div className="aspect-square relative overflow-hidden rounded-t-lg">
-                        <img
-                          src={getPrimaryImage(listing.images) || '/placeholder.svg'}
-                          alt={listing.title}
-                          className="w-full h-full object-cover"
-                          loading="lazy"
-                          decoding="async"
-                          onError={e => {
-                            e.currentTarget.src = '/placeholder.svg';
-                          }}
-                          style={{ background: '#f3f4f6', minHeight: '100px' }}
-                        />
-                        <div className="absolute top-2 right-2">
-                          <Badge variant="secondary">{listing.condition}</Badge>
-                        </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filteredListings.map((listing) => (
+              <Card 
+                key={listing.id} 
+                className="hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => handleListingClick(listing.id)}
+              >
+                <CardContent className="p-0">
+                  <div className="aspect-square relative overflow-hidden rounded-t-lg">
+                    <img
+                      src={getPrimaryImage(listing.images) || '/placeholder.svg'}
+                      alt={listing.title}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                      decoding="async"
+                      onError={e => {
+                        e.currentTarget.src = '/placeholder.svg';
+                      }}
+                      style={{ background: '#f3f4f6', minHeight: '100px' }}
+                    />
+                    <div className="absolute top-2 right-2">
+                      <Badge variant="secondary">{listing.condition}</Badge>
+                    </div>
+                  </div>
+                  
+                  <div className="p-4">
+                    <h3 className="font-semibold text-lg mb-2 line-clamp-2">{listing.title}</h3>
+                    
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-2xl font-bold text-blue-600">
+                        {formatPrice(listing.price)}
+                      </span>
+                      {listing.category && (
+                        <Badge variant="outline">{listing.category.name}</Badge>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center justify-between text-sm text-gray-500">
+                      <div className="flex items-center">
+                        <MapPin className="h-4 w-4 mr-1" />
+                        {listing.location_city && listing.location_state 
+                          ? `${listing.location_city}, ${listing.location_state}`
+                          : 'Location not specified'
+                        }
                       </div>
-                      <div className="p-4">
-                        <h3 className="font-semibold text-lg mb-2 line-clamp-2">{listing.title}</h3>
-                        <div className="flex items-center justify-between mb-3">
-                          <span className="text-2xl font-bold text-blue-600">
-                            {formatPrice(listing.price)}
-                          </span>
-                          {listing.category && (
-                            <Badge variant="outline">{listing.category.name}</Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center justify-between text-sm text-gray-500">
-                          <div className="flex items-center">
-                            <MapPin className="h-4 w-4 mr-1" />
-                            {listing.location_city && listing.location_state 
-                              ? `${listing.location_city}, ${listing.location_state}`
-                              : 'Location not specified'
-                            }
-                          </div>
-                          <div className="flex items-center">
-                            <Eye className="h-4 w-4 mr-1" />
-                            {listing.views_count}
-                          </div>
-                        </div>
-                        {listing.seller && (
-                          <div className="mt-2 text-sm text-gray-600">
-                            By {listing.seller.full_name}
-                          </div>
-                        )}
+                      <div className="flex items-center">
+                        <Eye className="h-4 w-4 mr-1" />
+                        {listing.views_count}
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            );
-          })()
+                    </div>
+                    
+                    {listing.seller && (
+                      <div className="mt-2 text-sm text-gray-600">
+                        By {listing.seller.full_name}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         )}
       </div>
 
