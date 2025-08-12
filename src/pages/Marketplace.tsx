@@ -113,6 +113,7 @@ const Marketplace = () => {
       if (error) throw error;
 
       // Get additional data in parallel
+
       const [profilesData, categoriesData, imagesData] = await Promise.all([
         supabase
           .from('profiles')
@@ -126,16 +127,14 @@ const Marketplace = () => {
           .from('marketplace_images')
           .select('listing_id, image_url, is_primary')
           .in('listing_id', listingsData?.map(l => l.id) || [])
+          .eq('is_primary', true)
       ]);
 
       const profilesMap = new Map(profilesData.data?.map(p => [p.id, p]) || []);
       const categoriesMap = new Map(categoriesData.data?.map(c => [c.id, c]) || []);
-      const imagesMap = new Map<string, any[]>();
+      const imagesMap = new Map<string, any>();
       imagesData.data?.forEach(img => {
-        if (!imagesMap.has(img.listing_id)) {
-          imagesMap.set(img.listing_id, []);
-        }
-        imagesMap.get(img.listing_id)!.push(img);
+        imagesMap.set(img.listing_id, img);
       });
 
       const enrichedListings: Listing[] = (listingsData || []).map(listing => ({
@@ -150,7 +149,7 @@ const Marketplace = () => {
         is_active: listing.is_active,
         seller: profilesMap.get(listing.seller_id) || null,
         category: listing.category_id ? categoriesMap.get(listing.category_id) || null : null,
-        images: imagesMap.get(listing.id) || []
+        images: imagesMap.get(listing.id) ? [imagesMap.get(listing.id)] : []
       }));
 
       if (reset) {
