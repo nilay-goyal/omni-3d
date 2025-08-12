@@ -190,16 +190,26 @@ const CreateListing = () => {
 
       if (listingError) throw listingError;
 
-      // Upload images if provided
+      // Upload images to Supabase Storage and save public URLs
       if (imageFiles.length > 0 && listing) {
         for (let i = 0; i < imageFiles.length; i++) {
           const file = imageFiles[i];
           const fileExt = file.name.split('.').pop();
           const fileName = `${listing.id}-${i}-${Date.now()}.${fileExt}`;
-          
-          // For now, we'll store a placeholder URL since we don't have storage set up
-          const imageUrl = imagePreviews[i] || `/placeholder.svg`;
-
+          // Upload to Supabase Storage
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('marketplace-images')
+            .upload(fileName, file, { upsert: true });
+          if (uploadError) {
+            console.error('Error uploading image:', uploadError);
+            continue;
+          }
+          // Get public URL
+          const { data: publicUrlData } = supabase.storage
+            .from('marketplace-images')
+            .getPublicUrl(fileName);
+          const imageUrl = publicUrlData?.publicUrl || '/placeholder.svg';
+          // Save image record
           const { error: imageError } = await supabase
             .from('marketplace_images')
             .insert({
@@ -209,7 +219,6 @@ const CreateListing = () => {
               alt_text: formData.title,
               display_order: i + 1
             });
-
           if (imageError) {
             console.error('Error saving image record:', imageError);
           }
