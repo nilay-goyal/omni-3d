@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import mixpanel from 'mixpanel-browser';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, MapPin, Star, MessageCircle } from "lucide-react";
@@ -352,6 +353,11 @@ const PrinterMap = () => {
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
+                              mixpanel.track("Request Quote Clicked", {
+                                page: window.location.pathname,
+                                listing_id: seller?.id ?? undefined,
+                                city_id: seller?.location_city ?? undefined
+                              });
                               handleOpenChat(seller);
                             }}
                           >
