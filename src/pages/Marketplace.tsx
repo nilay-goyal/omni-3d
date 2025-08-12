@@ -83,9 +83,23 @@ const Marketplace = () => {
   const fetchListings = useCallback(async (pageNum = 0, reset = false) => {
     try {
       setLoading(true);
+      // Optimized query: join seller, category, and only primary image
       let query = supabase
         .from('marketplace_listings')
-        .select('*')
+        .select(`
+          id,
+          title,
+          price,
+          condition,
+          location_city,
+          location_state,
+          views_count,
+          created_at,
+          is_active,
+          seller:profiles(full_name),
+          category:marketplace_categories(name),
+          images:marketplace_images(image_url,is_primary)
+        `)
         .eq('is_active', true)
         .order('created_at', { ascending: false })
         .range(pageNum * PAGE_SIZE, pageNum * PAGE_SIZE + PAGE_SIZE - 1);
@@ -95,7 +109,6 @@ const Marketplace = () => {
         query = query.ilike('title', `%${searchTerm}%`);
       }
       if (selectedCategory !== 'all') {
-        // Need to get category id from name
         const cat = categories.find(c => c.name === selectedCategory);
         if (cat) query = query.eq('category_id', cat.id);
       }
@@ -112,32 +125,7 @@ const Marketplace = () => {
       const { data: listingsData, error } = await query;
       if (error) throw error;
 
-      // Get additional data in parallel
-      const [profilesData, categoriesData, imagesData] = await Promise.all([
-        supabase
-          .from('profiles')
-          .select('id, full_name')
-          .in('id', listingsData?.map(l => l.seller_id) || []),
-        supabase
-          .from('marketplace_categories')
-          .select('id, name')
-          .in('id', listingsData?.map(l => l.category_id).filter(Boolean) || []),
-        supabase
-          .from('marketplace_images')
-          .select('listing_id, image_url, is_primary')
-          .in('listing_id', listingsData?.map(l => l.id) || [])
-      ]);
-
-      const profilesMap = new Map(profilesData.data?.map(p => [p.id, p]) || []);
-      const categoriesMap = new Map(categoriesData.data?.map(c => [c.id, c]) || []);
-      const imagesMap = new Map<string, any[]>();
-      imagesData.data?.forEach(img => {
-        if (!imagesMap.has(img.listing_id)) {
-          imagesMap.set(img.listing_id, []);
-        }
-        imagesMap.get(img.listing_id)!.push(img);
-      });
-
+      // Only keep primary image for each listing
       const enrichedListings: Listing[] = (listingsData || []).map(listing => ({
         id: listing.id,
         title: listing.title,
@@ -148,9 +136,11 @@ const Marketplace = () => {
         views_count: listing.views_count,
         created_at: listing.created_at,
         is_active: listing.is_active,
-        seller: profilesMap.get(listing.seller_id) || null,
-        category: listing.category_id ? categoriesMap.get(listing.category_id) || null : null,
-        images: imagesMap.get(listing.id) || []
+        seller: listing.seller || null,
+        category: listing.category || null,
+        images: Array.isArray(listing.images)
+          ? [listing.images.find(img => img.is_primary) || listing.images[0]].filter(Boolean)
+          : []
       }));
 
       if (reset) {
@@ -388,7 +378,7 @@ const Marketplace = () => {
             </p>
             {listings.length === 0 && (
               <div className="mt-4">
-                <Button onClick={fetchListings} variant="outline">
+                <Button onClick={() => fetchListings(0, true)} variant="outline">
                   Refresh Listings
                 </Button>
               </div>
