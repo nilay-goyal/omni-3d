@@ -1,31 +1,25 @@
-// Lightweight performance metrics utilities used by web-vitals and pages
-// Keep this minimal to avoid introducing runtime errors.
-import type { Metric } from 'web-vitals';
+// src/lib/perfMetrics.ts
+// Utility for logging web-vitals and fetch timings
 
-export function logPerfMetric(metric: Metric) {
+export async function logPerfMetric(metric: { name: string; value: number; [key: string]: any }) {
   try {
-    // Log to console for now; can be wired to analytics later
-    console.info(`[perf] ${metric.name}:`, {
-      value: Math.round(metric.value * 100) / 100,
-      id: metric.id,
-      rating: (metric as any).rating,
-      delta: (metric as any).delta,
+    await fetch('/api/metrics', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(metric)
     });
   } catch (e) {
-    // Never let perf logging break the app
+    // Fail silently
   }
 }
 
 export function timer(label: string) {
-  const getNow = () => (typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now());
-  const start = getNow();
+  const start = performance.now();
   return {
     end: () => {
-      const duration = getNow() - start;
-      try {
-        console.info(`[perf] ${label} ms:`, Math.round(duration));
-      } catch {}
-    },
-  } as const;
+      const duration = performance.now() - start;
+      logPerfMetric({ name: 'fetch_duration', label, value: duration });
+      return duration;
+    }
+  };
 }
-
