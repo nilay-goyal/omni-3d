@@ -81,6 +81,9 @@ const Marketplace = () => {
   }, []);
 
   const fetchListings = useCallback(async (pageNum = 0, reset = false) => {
+    // Perf timer for TTFR
+    const { timer } = await import('../lib/perfMetrics');
+    const t = timer('fetchListings');
     try {
       setLoading(true);
       let query = supabase
@@ -110,6 +113,7 @@ const Marketplace = () => {
       }
 
       const { data: listingsData, error } = await query;
+      t.end(); // Log TTFR
       if (error) throw error;
 
       // Get additional data in parallel
