@@ -28,8 +28,11 @@ export const useSellerListings = () => {
   const { toast } = useToast();
   const [listings, setListings] = useState<SellerListing[]>([]);
   const [listingsLoading, setListingsLoading] = useState(true);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const PAGE_SIZE = 20;
 
-  const fetchSellerListings = useCallback(async () => {
+  const fetchSellerListings = useCallback(async (pageNum = 0, reset = false) => {
     try {
       setListingsLoading(true);
       const { data, error } = await supabase
@@ -49,17 +52,21 @@ export const useSellerListings = () => {
           marketplace_images(image_url, is_primary)
         `)
         .eq('seller_id', user?.id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .range(pageNum * PAGE_SIZE, pageNum * PAGE_SIZE + PAGE_SIZE - 1);
 
       if (error) throw error;
-      
-      // Transform the data to match our interface
       const transformedData = (data || []).map(item => ({
         ...item,
         images: item.marketplace_images || []
       }));
-      
-      setListings(transformedData);
+      if (reset) {
+        setListings(transformedData);
+      } else {
+        setListings(prev => [...prev, ...transformedData]);
+      }
+      setHasMore(transformedData.length === PAGE_SIZE);
+      setPage(pageNum);
     } catch (error) {
       console.error('Error fetching seller listings:', error);
       toast({
@@ -67,6 +74,7 @@ export const useSellerListings = () => {
         description: "Failed to load your listings",
         variant: "destructive"
       });
+      if (reset) setListings([]);
     } finally {
       setListingsLoading(false);
     }
@@ -77,11 +85,27 @@ export const useSellerListings = () => {
       navigate('/seller-signin');
       return;
     }
-    
     if (user && profile?.user_type === 'seller') {
-      fetchSellerListings();
+      fetchSellerListings(0, true);
     }
-  }, [user, profile, loading, navigate, fetchSellerListings]);
+    // eslint-disable-next-line
+  }, [user, profile, loading]);
+
+  // Infinite scroll handler
+  const handleScroll = useCallback(() => {
+    if (!hasMore || listingsLoading) return;
+    const scrollY = window.scrollY;
+    const viewportHeight = window.innerHeight;
+    const fullHeight = document.body.offsetHeight;
+    if (scrollY + viewportHeight + 200 > fullHeight) {
+      fetchSellerListings(page + 1);
+    }
+  }, [hasMore, listingsLoading, page, fetchSellerListings]);
+
+  useEffect(() => {
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [handleScroll]);
 
   const deleteListing = useCallback(async (listingId: string) => {
     try {

@@ -33,7 +33,7 @@ const SellerListings = () => {
     setListingToDelete(null);
   };
 
-  if (loading || listingsLoading) {
+  if (loading && listings.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">

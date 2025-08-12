@@ -50,6 +50,9 @@ const Marketplace = () => {
   const [priceRange, setPriceRange] = useState<{ min: string; max: string }>({ min: "", max: "" });
   const [selectedListingId, setSelectedListingId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const PAGE_SIZE = 20;
   
   // Debounced search
   useEffect(() => {
@@ -58,8 +61,10 @@ const Marketplace = () => {
   }, [searchInput]);
 
   useEffect(() => {
-    Promise.all([fetchListings(), fetchCategories()]);
-  }, []);
+    fetchCategories();
+    fetchListings(0, true);
+    // eslint-disable-next-line
+  }, [searchTerm, selectedCategory, selectedCondition, priceRange]);
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -75,46 +80,57 @@ const Marketplace = () => {
     }
   }, []);
 
-  const fetchListings = useCallback(async () => {
+  const fetchListings = useCallback(async (pageNum = 0, reset = false) => {
     try {
       setLoading(true);
-      
-      // Get basic listings first (much faster)
-      const { data: listingsData, error } = await supabase
+      let query = supabase
         .from('marketplace_listings')
         .select('*')
         .eq('is_active', true)
         .order('created_at', { ascending: false })
-        .limit(50);
+        .range(pageNum * PAGE_SIZE, pageNum * PAGE_SIZE + PAGE_SIZE - 1);
 
+      // Add filters to query
+      if (searchTerm) {
+        query = query.ilike('title', `%${searchTerm}%`);
+      }
+      if (selectedCategory !== 'all') {
+        // Need to get category id from name
+        const cat = categories.find(c => c.name === selectedCategory);
+        if (cat) query = query.eq('category_id', cat.id);
+      }
+      if (selectedCondition !== 'all') {
+        query = query.eq('condition', selectedCondition);
+      }
+      if (priceRange.min) {
+        query = query.gte('price', parseFloat(priceRange.min));
+      }
+      if (priceRange.max) {
+        query = query.lte('price', parseFloat(priceRange.max));
+      }
+
+      const { data: listingsData, error } = await query;
       if (error) throw error;
 
       // Get additional data in parallel
       const [profilesData, categoriesData, imagesData] = await Promise.all([
-        // Get profiles for sellers
         supabase
           .from('profiles')
           .select('id, full_name')
           .in('id', listingsData?.map(l => l.seller_id) || []),
-        
-        // Get categories
         supabase
           .from('marketplace_categories')
           .select('id, name')
           .in('id', listingsData?.map(l => l.category_id).filter(Boolean) || []),
-        
-        // Get images
         supabase
           .from('marketplace_images')
           .select('listing_id, image_url, is_primary')
           .in('listing_id', listingsData?.map(l => l.id) || [])
       ]);
 
-      // Create lookup maps for performance
       const profilesMap = new Map(profilesData.data?.map(p => [p.id, p]) || []);
       const categoriesMap = new Map(categoriesData.data?.map(c => [c.id, c]) || []);
       const imagesMap = new Map<string, any[]>();
-      
       imagesData.data?.forEach(img => {
         if (!imagesMap.has(img.listing_id)) {
           imagesMap.set(img.listing_id, []);
@@ -122,7 +138,6 @@ const Marketplace = () => {
         imagesMap.get(img.listing_id)!.push(img);
       });
 
-      // Combine data efficiently
       const enrichedListings: Listing[] = (listingsData || []).map(listing => ({
         id: listing.id,
         title: listing.title,
@@ -138,26 +153,23 @@ const Marketplace = () => {
         images: imagesMap.get(listing.id) || []
       }));
 
-      setListings(enrichedListings);
+      if (reset) {
+        setListings(enrichedListings);
+      } else {
+        setListings(prev => [...prev, ...enrichedListings]);
+      }
+      setHasMore(enrichedListings.length === PAGE_SIZE);
+      setPage(pageNum);
     } catch (error) {
       console.error('Error fetching listings:', error);
-      setListings([]);
+      if (reset) setListings([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [searchTerm, selectedCategory, selectedCondition, priceRange, categories]);
 
-  const filteredListings = useMemo(() => {
-    return listings.filter(listing => {
-      const matchesSearch = !searchTerm || listing.title.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory = selectedCategory === "all" || listing.category?.name === selectedCategory;
-      const matchesCondition = selectedCondition === "all" || listing.condition === selectedCondition;
-      const matchesPrice = (!priceRange.min || listing.price >= parseFloat(priceRange.min)) &&
-                          (!priceRange.max || listing.price <= parseFloat(priceRange.max));
-      
-      return matchesSearch && matchesCategory && matchesCondition && matchesPrice;
-    });
-  }, [listings, searchTerm, selectedCategory, selectedCondition, priceRange]);
+  // No need for filteredListings, listings is already filtered from backend
+  const filteredListings = listings;
 
   const getPrimaryImage = useCallback((images: any[]) => {
     const primaryImage = images?.find(img => img.is_primary);
@@ -197,7 +209,23 @@ const Marketplace = () => {
     }
   }, [listings]);
 
-  if (loading) {
+  // Infinite scroll handler
+  const handleScroll = useCallback(() => {
+    if (!hasMore || loading) return;
+    const scrollY = window.scrollY;
+    const viewportHeight = window.innerHeight;
+    const fullHeight = document.body.offsetHeight;
+    if (scrollY + viewportHeight + 200 > fullHeight) {
+      fetchListings(page + 1);
+    }
+  }, [hasMore, loading, page, fetchListings]);
+
+  useEffect(() => {
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [handleScroll]);
+
+  if (loading && listings.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
